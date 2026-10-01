@@ -1,0 +1,54 @@
+name: hiangle-monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"      # 每 15 分钟（GitHub 高峰期可能延迟）
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "run = 正常跑一轮；dry = 演练不发通知；test-notify = 发测试通知"
+        default: run
+        type: choice
+        options: [run, dry, test-notify]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hiangle-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: 跑监控
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+        run: |
+          MODE="${{ github.event.inputs.mode || 'run' }}"
+          if [ "$MODE" = "test-notify" ]; then python -m hmon test-notify; exit 0; fi
+          if [ "$MODE" = "dry" ]; then python -m hmon run --dry-run; exit 0; fi
+          python -m hmon run
+      - name: 保存状态
+        if: ${{ github.event.inputs.mode == 'run' || github.event_name == 'schedule' }}
+        run: |
+          git config user.name "hiangle-bot"
+          git config user.email "hiangle-bot@users.noreply.github.com"
+          git add -A state
+          git diff --cached --quiet || git commit -m "state $(date -u +%FT%TZ)" -q
+          git pull --rebase -q || true
+          git push -q
