@@ -1,0 +1,24 @@
+name: unpack-code
+on:
+  push:
+    paths: ["hiangle-monitor.zip"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 解压代码到仓库根目录
+        run: |
+          test -f hiangle-monitor.zip || { echo "没有 zip，跳过"; exit 0; }
+          unzip -q hiangle-monitor.zip -d /tmp/u
+          rm -rf /tmp/u/hiangle/.github
+          cp -r /tmp/u/hiangle/. .
+          git rm -q hiangle-monitor.zip
+          git config user.name "hiangle-bot"
+          git config user.email "hiangle-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "解压监控代码" -q
+          git push -q
