@@ -1,0 +1,109 @@
+# Five Ten Hiangle 库存监控配置
+# 以后监控别的鞋：复制一家店的配置，改 search / title_must / slug_must 即可。
+
+profit:
+  sale_price: 1050        # 国内售价（元）
+  domestic_post: 10       # 国内邮费（元）
+  fx_fee: 0.015           # 信用卡换汇损耗
+  forwarder:              # 每双转运费（元），按店铺所在地区
+    US: 100               # QQEX 包税 50–100，按最贵算
+    default: 150          # 其他国家暂无报价，保守估
+
+thresholds:               # 按“到手成本”（标价+店铺运费，换成人民币）判断
+  core_uk: [4, 9]         # 主力码 UK 4–9（≈ EU 36⅔–43⅓）
+  strong: 750             # 主力码 ≤750 → 【好价】
+  normal: 850             # 主力码 ≤850 → 普通提醒；码制不明也用这条线
+  cold: 650               # 主力码以外 ≤650 → 【冷门码】
+
+rules:
+  confirm_runs: 2         # 连续几次检测都有货才推（GitHub 每 15 分钟一轮）
+  fail_alert_after: 3     # 连续几次抓取失败发“监控失效”
+  max_separate_alerts: 5  # 一轮超过几条就合并成一条
+  digest_hour_bj: 9       # 每天几点（北京时间）后发日报邮件
+
+stores:
+  - id: bergfreunde_eu
+    name: Bergfreunde（德国）
+    type: bergfreunde
+    base: https://www.bergfreunde.eu
+    home: https://www.bergfreunde.eu/index.php?cl=search&searchparam=hiangle
+    currency: EUR
+    region: DE
+    shipping: 0            # 德国境内满 €99 免邮（页面标注），寄德国转运仓
+    size_system: AUTO      # 页面自带 “(UK)” 标注
+    size_verified: true
+    paths: [five-ten-womens-hiangle-climbing-shoes]   # 女款页（目前停售），补货时能发现
+
+  - id: alpinetrek_uk
+    name: Alpinetrek（英国，Bergfreunde 英国站）
+    type: bergfreunde
+    base: https://www.alpinetrek.co.uk
+    home: https://www.alpinetrek.co.uk/index.php?cl=search&searchparam=hiangle
+    currency: GBP
+    region: GB
+    shipping: 5            # 估算
+    size_system: AUTO
+    size_verified: true
+    paths: [five-ten-womens-hiangle-climbing-shoes]
+
+  - id: spokex
+    name: SpokeX（美国）
+    type: shopify
+    domain: spokex.com
+    home: https://spokex.com/products/adidas-five-ten-hiangle-climbing-shoe
+    currency: USD
+    region: US
+    shipping: 10           # 估算
+    size_system: US_M      # 店铺只写数字，按美码男款推测，待验收
+    size_verified: false
+    condition: new
+
+  - id: delire
+    name: Délire Escalade（加拿大）
+    type: shopify
+    domain: boutique.delirescalade.com
+    home: https://boutique.delirescalade.com/en/products/five-ten-hiangle-pro
+    currency: CAD
+    region: CA
+    shipping: 15           # 估算
+    size_system: US_M      # 推测，待验收
+    size_verified: false
+    condition: new
+    # 注意：页面实际显示清仓价 C$161（-30%），但接口给的是原价 C$230，
+    # 折扣是结账/前台插件算的，程序拿不到 → 这家店的到手成本会偏高（只会漏报，不会误报）
+
+  - id: geartrade
+    name: Geartrade（美国，寄卖/二手）
+    type: shopify
+    domain: geartrade.com
+    home: https://geartrade.com/search?q=hiangle
+    currency: USD
+    region: US
+    shipping: 10           # 估算
+    size_system: AUTO      # 只认带标注的写法（如 “Mens 11/Womens 12”）；“41.5”“4.5”这类不换算，标“码制不明”
+    size_verified: false
+    condition: tags        # 按标签判断成色
+    used_tags: [ConsignmentItem, Consignment, Used]
+
+  - id: trekkinn
+    name: Trekkinn（西班牙）
+    type: jsonld
+    urls:
+      - https://www.tradeinn.com/trekkinn/en/five-ten-5.10-hiangle-climbing-shoes/137587095/p
+    product_ids: [hiangle]
+    home: https://www.tradeinn.com/trekkinn/en/five-ten-5.10-hiangle-climbing-shoes/137587095/p
+    currency: USD          # 以页面标注为准
+    region: ES
+    shipping: 10           # 估算
+    size_system: AUTO      # 页面写 “EU 42”
+    size_verified: true
+
+  - id: ebay_us
+    name: eBay 美国
+    type: ebay
+    marketplace: EBAY_US
+    search: five ten hiangle
+    currency: USD
+    region: US
+    shipping: 15           # 估算
+    enabled: true          # 没配 EBAY_APP_ID / EBAY_CERT_ID 时自动跳过
