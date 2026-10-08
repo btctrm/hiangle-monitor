@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import re
 import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
 
@@ -33,11 +34,16 @@ def _serverchan(title: str, md: str) -> str:
     return "Server酱 成功" if r.ok else f"Server酱 失败：{r.text[:120]}"
 
 
-def _email(title: str, md: str) -> str:
+def _email(title: str, md: str, html: str | None = None) -> str:
     user, pw, to = os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASS"), os.environ.get("MAIL_TO")
     if not (user and pw and to):
         return ""
-    msg = MIMEText(md, "plain", "utf-8")
+    if html:
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(md, "plain", "utf-8"))
+        msg.attach(MIMEText(html, "html", "utf-8"))
+    else:
+        msg = MIMEText(md, "plain", "utf-8")
     msg["Subject"] = title
     msg["From"] = formataddr(("鞋子监控", user))
     msg["To"] = to
@@ -48,7 +54,7 @@ def _email(title: str, md: str) -> str:
     return "邮件 成功"
 
 
-def send(title: str, md: str, *, wechat: bool = True, email: bool = True, dry: bool = False) -> list[str]:
+def send(title: str, md: str, *, wechat: bool = True, email: bool = True, dry: bool = False, html: str | None = None) -> list[str]:
     if dry:
         print("\n======== [演练，不发送] " + title + "\n" + md + "\n========")
         return ["演练"]
@@ -56,7 +62,7 @@ def send(title: str, md: str, *, wechat: bool = True, email: bool = True, dry: b
     chans = ([_pushplus, _serverchan] if wechat else []) + ([_email] if email else [])
     for fn in chans:
         try:
-            r = fn(title, md)
+            r = fn(title, md, html) if fn is _email else fn(title, md)
         except Exception as e:  # 通知失败不能让监控本身崩掉
             r = f"{fn.__name__} 异常：{e}"
         if r:

@@ -125,3 +125,26 @@ def fmt_uk(x: float | None) -> str:
     if x is None:
         return "码制不明"
     return f"UK {x:g}"
+
+
+# UK -> EU（同一张官方表反查）
+_UK_TO_EU = {v: k for k, v in _EU_TO_UK.items()}
+
+
+def eu_of(uk: float | None) -> str:
+    if uk is None:
+        return "?"
+    return _UK_TO_EU.get(uk, "表外")  # 官方表没有的码（如 UK 3）
+
+
+def size_line(uk: float | None, raw: str = "") -> str:
+    """给人看的尺码：欧码在前，附 UK 和美码。"""
+    if uk is None:
+        return f"码制不明（店铺写“{raw}”）"
+    return f"EU {eu_of(uk)} · UK {uk:g} · US男 {uk + 0.5:g} / US女 {uk + 1.5:g}"
+
+
+def size_short(uk: float | None, raw: str = "") -> str:
+    if uk is None:
+        return f"码制不明（{raw}）"
+    return f"EU {eu_of(uk)}（UK {uk:g}）"

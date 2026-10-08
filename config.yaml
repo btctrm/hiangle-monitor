@@ -21,6 +21,13 @@ rules:
   max_separate_alerts: 5  # 一轮超过几条就合并成一条
   digest_hour_bj: 9       # 每天几点（北京时间）后发日报邮件
 
+# 不再监控的商品（看过觉得不要的）：不推送、不进日报。
+# store = 店铺 id；product = 商品标识（Shopify 是链接里 /products/ 后面那段）；可选 variant = 具体尺码
+ignore:
+  - store: geartrade
+    product: five-ten-hiangle-climbing-shoes-mens-1702276
+    note: 二手 “41.5” 码，磨损严重，2026-10-08 你要求不再监控
+
 stores:
   - id: bergfreunde_eu
     name: Bergfreunde（德国）

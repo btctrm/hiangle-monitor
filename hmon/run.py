@@ -20,7 +20,9 @@ from . import notify
 from .core import IN, OUT, UNKNOWN, Obs, StoreResult
 from .money import PUSH_TIERS, TIER_LABEL, TIER_RANK, evaluate, rates
 from .parsers import bergfreunde, ebay, jsonld, shopify
-from .sizes import fmt_uk
+import html as _h
+
+from .sizes import eu_of, fmt_uk, size_line, size_short
 
 ROOT = Path(__file__).resolve().parent.parent
 BJ = timezone(timedelta(hours=8))
@@ -63,11 +65,11 @@ def alert_text(o: dict, ev: dict, scfg: dict, first_seen: str, note: str) -> tup
     uk = fmt_uk(o["uk"])
     title = (
         f"{TIER_LABEL.get(tier, '')}{COND_LABEL.get(o['condition'], '')}"
-        f"{o['title'][:40]} {uk} 到手¥{ev['landed']} · {scfg['name']}"
+        f"{o['title'][:40]} {size_short(o['uk'], o['raw_size'])} 到手¥{ev['landed']} · {scfg['name']}"
     )
     lines = [
         f"### {TIER_LABEL.get(tier, '')}{COND_LABEL.get(o['condition'], '')}{o['title']}",
-        f"- **尺码**：{uk}（店铺原文：{o['raw_size']}{'，换算按店铺码制推测' if scfg.get('size_verified') is False else ''}）",
+        f"- **尺码**：{size_line(o['uk'], o['raw_size'])}（店铺原文：{o['raw_size']}{'，换算按店铺码制推测' if scfg.get('size_verified') is False else ''}）",
         f"- **配色**：{o['color'] or '—'}",
         f"- **店铺**：{scfg['name']}（{scfg.get('region', '')}）",
         f"- **标价**：{money(o['price'], o['currency'])}，店铺运费估 {money(ev['shipping'], o['currency'])}",
@@ -82,6 +84,19 @@ def alert_text(o: dict, ev: dict, scfg: dict, first_seen: str, note: str) -> tup
         lines.append(f"- **备注**：{o['note']}")
     lines.append(f"- **链接**：{o['url']}")
     return title, "\n".join(lines)
+
+
+def is_ignored(cfg: dict, store: str, product_id: str, variant_id: str = "") -> bool:
+    """config.yaml 里 ignore 列表：你看过觉得不要的商品，不再推送、不进日报。"""
+    for it in cfg.get("ignore") or []:
+        if it.get("store") != store:
+            continue
+        if it.get("product") and it["product"] != product_id:
+            continue
+        if it.get("variant") and str(it["variant"]) != str(variant_id):
+            continue
+        return True
+    return False
 
 
 def scan_store(scfg: dict, st: dict) -> StoreResult:
@@ -147,6 +162,10 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
 
         seen = set()
         n_in = n_unknown = 0
+        res.obs = [o for o in res.obs if not is_ignored(cfg, sid, o.product_id, o.variant_id)]
+        for k in [k for k, v in st["variants"].items() if v["store"] == sid and is_ignored(cfg, sid, v["product_id"], k.split("|")[-1])]:
+            st["variants"].pop(k)
+            mine.pop(k, None)
         for o in res.obs:
             seen.add(o.key)
             v = st["variants"].get(o.key)
@@ -235,43 +254,92 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
     return 0
 
 
-def digest_text(cfg: dict, st: dict) -> tuple[str, str]:
+def _cost_row(v: dict) -> dict:
+    return {
+        "eu": eu_of(v["uk"]) if v["uk"] is not None else "?",
+        "uk": f"{v['uk']:g}" if v["uk"] is not None else "?",
+        "usm": f"{v['uk'] + 0.5:g}" if v["uk"] is not None else "?",
+        "raw": v.get("raw_size", ""),
+        "price": money(v.get("price"), v.get("currency", "")),
+        "landed": v.get("landed"),
+        "profit": v.get("profit"),
+        "cond": {"new": "全新", "used": "二手", "unknown": "成色未知"}.get(v.get("condition"), "?"),
+        "tier": TIER_LABEL.get(v.get("tier"), "") or ("达标" if v.get("tier") in PUSH_TIERS else ""),
+        "title": v.get("title", ""),
+        "color": v.get("color", ""),
+        "url": v.get("url", ""),
+    }
+
+
+def digest_text(cfg: dict, st: dict) -> tuple[str, str, str]:
+    """日报：返回 (标题, 纯文本, HTML)。每个有货尺码都列出欧码、价格、到手成本、利润。"""
     stores = {s["id"]: s for s in cfg["stores"]}
     failing = {sid for sid, ss in st["stores"].items() if ss.get("fail", 0) > 0}
-    # 当前抓取失败的店不列入（状态不可信），只在“运行情况”里显示失败
-    rows = [v for v in st["variants"].values() if v.get("status") == IN and v.get("landed") is not None and v["store"] not in failing]
+    rows = [v for v in st["variants"].values()
+            if v.get("status") == IN and v.get("landed") is not None and v["store"] not in failing]
     rows.sort(key=lambda v: (-TIER_RANK.get(v.get("tier"), 0), v["landed"]))
-    r, live = rates()
-    lines = [f"# Hiangle 日报 {ts()}", ""]
+    _, live = rates()
     good = [v for v in rows if v.get("tier") in PUSH_TIERS]
-    lines.append(f"当前有货 {len(rows)} 个尺码，其中达到推送门槛 {len(good)} 个。{'' if live else '（汇率为兜底值）'}")
-    lines.append("")
-    lines.append("## 达到门槛")
+    now = ts()
+    title = f"Hiangle 日报 {now[:10]}：{len(good)} 个达标 / {len(rows)} 个有货"
+
+    # ---------- 纯文本 ----------
+    t = [f"Hiangle 日报 {now}（北京时间）", f"当前有货 {len(rows)} 个尺码，达到推送门槛 {len(good)} 个。{'' if live else '（汇率为兜底值）'}", "", "【达到门槛】"]
     for v in good:
-        s = stores.get(v["store"], {})
-        lines.append(f"- {TIER_LABEL.get(v['tier'], '')}{COND_LABEL.get(v['condition'], '')}{fmt_uk(v['uk'])}（{v['raw_size']}） ¥{v['landed']} 利润≈¥{v['profit']} · {s.get('name', v['store'])} · {v['title'][:40]} · {v['url']}")
+        r = _cost_row(v)
+        t.append(f"- {r['tier']}{COND_LABEL.get(v['condition'], '')}{size_short(v['uk'], v['raw_size'])} 到手¥{r['landed']} 利润≈¥{r['profit']} · {stores.get(v['store'], {}).get('name', v['store'])} · {r['title'][:40]} · {r['url']}")
     if not good:
-        lines.append("- 暂无")
-    lines += ["", "## 其余有货（未达门槛，只记录）"]
+        t.append("- 暂无")
     by_store: dict = {}
     for v in rows:
-        if v.get("tier") not in PUSH_TIERS:
-            by_store.setdefault(v["store"], []).append(v)
+        by_store.setdefault(v["store"], []).append(v)
     for sid, vs in by_store.items():
-        s = stores.get(sid, {})
-        cheapest = min(vs, key=lambda x: x["landed"])
-        sizes = [fmt_uk(u) for u in sorted({x["uk"] for x in vs}, key=lambda u: (u is None, u or 0))]
-        lines.append(f"- {s.get('name', sid)}：{len(vs)} 个，最低到手 ¥{cheapest['landed']}；尺码 {', '.join(sizes)}")
-    lines += ["", "## 运行情况"]
-    lines.append(f"- 今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}")
+        t += ["", f"【{stores.get(sid, {}).get('name', sid)}】{len(vs)} 个有货"]
+        for v in sorted(vs, key=lambda x: (x["title"], x["uk"] if x["uk"] is not None else 99)):
+            r = _cost_row(v)
+            t.append(f"- EU {r['eu']} / UK {r['uk']} / US男 {r['usm']}（原文 {r['raw']}） {r['price']} → 到手¥{r['landed']} 利润≈¥{r['profit']} {r['cond']} · {r['title'][:30]} {r['color'][:20]}")
+    t += ["", "【运行情况】", f"- 今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}"]
     for sid, ss in st["stores"].items():
-        s = stores.get(sid, {})
-        if ss.get("fail", 0):
-            state = f"失败 {ss['fail']} 次：{ss.get('last_error', '')}"
-        else:
-            state = st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
-        lines.append(f"- {s.get('name', sid)}：{state}（上次成功 {ss.get('last_ok', '-')}）")
-    return f"Hiangle 日报 {ts()[:10]}：{len(good)} 个达标", "\n".join(lines)
+        state = f"失败 {ss['fail']} 次：{ss.get('last_error', '')}" if ss.get("fail", 0) else st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
+        t.append(f"- {stores.get(sid, {}).get('name', sid)}：{state}")
+
+    # ---------- HTML ----------
+    css_td = "padding:4px 8px;border-bottom:1px solid #ddd;font-size:13px;white-space:nowrap"
+    css_th = css_td + ";background:#f3f3f3;text-align:left"
+    head = "".join(f"<th style='{css_th}'>{x}</th>" for x in ["欧码", "UK", "US男", "店铺原文", "标价", "到手成本", "预估利润", "成色", "款式 / 配色", "链接"])
+
+    def tr(v, hl=False):
+        r = _cost_row(v)
+        bg = "background:#fff6d6;" if hl else ""
+        cells = [f"<b>{_h.escape(r['eu'])}</b>", r["uk"], r["usm"], _h.escape(r["raw"]), _h.escape(r["price"]),
+                 f"¥{r['landed']}", f"¥{r['profit']}", r["cond"],
+                 _h.escape(f"{r['tier']} {r['title'][:38]} · {r['color'][:24]}"),
+                 f"<a href='{_h.escape(r['url'])}'>打开</a>"]
+        return "<tr>" + "".join(f"<td style='{bg}{css_td}'>{c}</td>" for c in cells) + "</tr>"
+
+    hp = [f"<div style='font-family:-apple-system,Helvetica,Arial,sans-serif;color:#222'>",
+          f"<h2 style='margin:0 0 4px'>Hiangle 日报</h2><div style='color:#666;font-size:13px'>{now}（北京时间） · 当前有货 {len(rows)} 个尺码，达标 {len(good)} 个{'' if live else ' · 汇率为兜底值'}</div>",
+          "<h3>达到门槛</h3>"]
+    if good:
+        hp.append(f"<table style='border-collapse:collapse'><tr>{head}<th style='{css_th}'>店铺</th></tr>")
+        for v in good:
+            hp.append(tr(v, True).replace("</tr>", f"<td style='{css_td}'>{_h.escape(stores.get(v['store'], {}).get('name', v['store']))}</td></tr>"))
+        hp.append("</table>")
+    else:
+        hp.append("<p>暂无</p>")
+    hp.append("<h3>各店全部有货尺码</h3>")
+    for sid, vs in by_store.items():
+        hp.append(f"<h4 style='margin:14px 0 4px'>{_h.escape(stores.get(sid, {}).get('name', sid))} · {len(vs)} 个有货</h4><table style='border-collapse:collapse'><tr>{head}</tr>")
+        for v in sorted(vs, key=lambda x: (x["title"], x["uk"] if x["uk"] is not None else 99)):
+            hp.append(tr(v, v.get("tier") in PUSH_TIERS))
+        hp.append("</table>")
+    hp.append("<h3>运行情况</h3><ul style='font-size:13px'>")
+    hp.append(f"<li>今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}</li>")
+    for sid, ss in st["stores"].items():
+        state = f"失败 {ss['fail']} 次：{ss.get('last_error', '')}" if ss.get("fail", 0) else st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
+        hp.append(f"<li>{_h.escape(stores.get(sid, {}).get('name', sid))}：{_h.escape(state)}</li>")
+    hp.append("</ul><p style='color:#888;font-size:12px'>到手成本 = (标价 + 店铺运费估算) × 汇率 × 1.015；预估利润 = 1050 − 国内邮费 − 转运费 − 到手成本。黄色行 = 达到推送门槛。</p></div>")
+    return title, "\n".join(t), "".join(hp)
 
 
 def maybe_digest(cfg: dict, st: dict, dry: bool) -> None:
@@ -280,10 +348,10 @@ def maybe_digest(cfg: dict, st: dict, dry: bool) -> None:
     hour = int(cfg["rules"]["digest_hour_bj"])
     first = not st["meta"].get("first_summary_sent")
     if first or (n.hour >= hour and st["meta"].get("last_digest") != today):
-        t, b = digest_text(cfg, st)
+        t, b, h = digest_text(cfg, st)
         if first:
             t = "【首次运行】" + t
-        sent = notify.send(t, b, wechat=first, email=True, dry=dry)
+        sent = notify.send(t, b, wechat=first, email=True, dry=dry, html=h)
         if dry or not sent:
             return  # 还没配置通知渠道（或演练）：不记为已发送，配好后会补发
         st["meta"]["last_digest"] = today
@@ -327,8 +395,10 @@ def main(argv=None):
     if a.cmd == "digest":
         cfg = load_cfg()
         st = load_state(ROOT / "state" / "state.json")
-        t, b = digest_text(cfg, st)
+        t, b, h = digest_text(cfg, st)
         print(t + "\n" + b)
+        if os.environ.get("DIGEST_HTML"):
+            Path(os.environ["DIGEST_HTML"]).write_text(h, encoding="utf-8")
         return 0
 
 
