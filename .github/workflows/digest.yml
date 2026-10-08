@@ -1,0 +1,33 @@
+name: send-digest-now
+
+# 手动立即发送一封日报（用最近一次检测的结果），不影响定时监控
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: 发送日报
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from hmon import run as R, notify
+          cfg = R.load_cfg()
+          st = R.load_state(Path("state/state.json"))
+          t, b, h = R.digest_text(cfg, st)
+          print(notify.send("【手动】" + t, b, wechat=False, html=h))
+          PY
