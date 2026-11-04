@@ -54,6 +54,8 @@ def evaluate(obs, store_cfg: dict, cfg: dict) -> dict:
         tier = "strong" if landed <= t["strong"] else "normal" if landed <= t["normal"] else "record"
     else:
         tier = "cold" if landed <= t["cold"] else "record"
+    if getattr(obs, "condition", "new") == "used" and not cfg.get("rules", {}).get("push_used", True) and tier in PUSH_TIERS:
+        tier = "record"  # 关掉二手推送时：二手只进日报
     return {
         "tier": tier,
         "landed": round(landed),

@@ -21,6 +21,7 @@ rules:
   max_separate_alerts: 5  # 一轮超过几条就合并成一条
   digest_hour_bj: 9       # 每天几点（北京时间）后发日报邮件
   price_drop_pct: 10      # 同一尺码价格连续两轮确认后比之前低这么多（%），就发“降价”提醒；0 = 关闭
+  push_used: true         # 二手货达标也推（标题带【二手】）；false = 二手只进日报
   price_drop_push: true   # 降价提醒是否推送（false = 只进日报）；只有冷门码降价时只进日报
 
 # 不再监控的商品（看过觉得不要的）：不推送、不进日报。

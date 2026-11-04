@@ -30,7 +30,7 @@ _UNICODE_FRAC = {"⅓": " 1/3", "⅔": " 2/3", "½": ".5"}
 
 
 def _norm(s: str) -> str:
-    s = str(s).strip()
+    s = str(s).strip().replace("’", "'").replace("‘", "'")
     for k, v in _UNICODE_FRAC.items():
         s = s.replace(k, v)
     s = s.replace(",", ".")
@@ -113,7 +113,7 @@ def _valid_uk(x: float | None) -> float | None:
 
 
 def gender_from_title(title: str) -> str | None:
-    t = title.lower()
+    t = title.lower().replace("’", "'")
     if re.search(r"women|womens|wmn|damen|femme|レディース", t):
         return "W"
     if re.search(r"\bmen'?s\b|\bmens\b|herren|homme|メンズ", t):

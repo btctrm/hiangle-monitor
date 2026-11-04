@@ -153,6 +153,15 @@ def test_migration_resets_unpushed_baseline_deal():
     assert go(p, [("a", None, IN, 300)]) == []
 
 
+def test_push_used_switch():
+    from hmon.core import Obs
+    o = Obs("fake", "a", "t", "u", "1", "8", 8, "", 600, "CNY", IN, condition="used")
+    cfg = dict(CFG, rules=dict(CFG["rules"], push_used=False))
+    setup()
+    assert money.evaluate(o, CFG["stores"][0], cfg)["tier"] == "record"
+    assert money.evaluate(o, CFG["stores"][0], CFG)["tier"] == "strong"
+
+
 def test_digest_shows_near_miss():
     p = setup()
     go(p, [("a", 8, IN, 900)])
