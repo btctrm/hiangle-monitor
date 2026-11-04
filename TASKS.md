@@ -11,12 +11,17 @@
 - [x] 9. 推送到 GitHub 分支 claude/gallant-euler-3uzttp（已修复 GitHub App 授权）
 - [x] 10. 合并到 main（btctrm/hiangle-monitor#1）
 - [ ] 11. 申请 eBay 开发者密钥（EBAY_APP_ID / EBAY_CERT_ID），三个 eBay 站一起生效
-- [ ] 12. 人工看一眼 Geartrade $38.35 女款 4.5 码（成色未知、码制不明；原价 $160）
+- [x] 12. 人工看一眼 Geartrade $38.35 女款 4.5 码：用户确认是二手、磨损很少（店铺数据没写成色）
 - [ ] 13. 人工核对 GearX、EpicTV 的尺码（实测换算：GearX 美码男 12 = UK 11.5；EpicTV 欧码 42 = UK 8），通过后删掉 trial
 
 - [x] 14. 第二批渠道：探测 30+ 个折扣/综合/二手/日本渠道，接入 Bergzeit、SportsShoes（清仓）、Poshmark、Yahoo!购物、乐天
 - [ ] 15. 申请日本接口密钥：YAHOO_JP_APPID（推荐，接口稳定）、RAKUTEN_APP_ID / RAKUTEN_ACCESS_KEY
-- [ ] 16. 第二批合并到 main
+- [x] 16. 第二批合并到 main（btctrm/hiangle-monitor#2）
+- [x] 17. 推送邮件改 HTML、寄卖店读取成色、码制不明附推测码数（btctrm/hiangle-monitor#3）
+- [x] 18. 写交接报告 HANDOFF.md
+- [ ] 19. **等用户回答**：最低利润线 min_profit 定多少、二手售价 used_sale_price 按多少算 → 再改 money.evaluate()
+- [ ] 20. 邮件是唯一渠道：全部渠道失败时让 Actions 标红，借 GitHub 自己的通知兜底
+- [ ] 21. 确认外部定时触发（workflow_dispatch 每 15 分钟）用的 token 有效期
 
 ## 新发现的事项
 - [ ] 日本转运费没有报价，暂按 ¥150；有实际报价请改 config.yaml 的 forwarder
@@ -29,5 +34,7 @@
 - [ ] EpicTV 页面价格随访问地区变（GitHub 服务器在美国，给的是美元）
 - [ ] Bergfreunde/Alpinetrek 的 Hiangle Pro UK 13.5/14.5 标价 €79.98/£68.48（缺货），补货的话到手约 ¥666，离冷门码门槛 ¥650 很近
 - [ ] Trekkinn 只盯了 1 个商品页，Pro 款和其他配色没覆盖
-- [ ] 门槛（¥750 / ¥850）比现在所有全新货的到手价低 25–35%，要不要改成“按利润”判断，等你决定
-- [ ] 读不了的店（已删）：Snowleader、Bike24（403）；Varuste、SportsShoes、Barrabes、Absolute-Snow（无逐码数据）；Sportfits、Neptune（404）；澳洲几家、Altitude Sports（非 Shopify）
+- [x] 门槛（¥750 / ¥850）：用户决定保持不变，宁高勿低；改为另加最低利润线（第 19 项）
+- [x] 读不了的店（已删）：Snowleader、Bike24、Sierra、Mercari（403）；Varuste、Barrabes、Absolute-Snow、Hardloop、Klimschoenen（无逐码数据）；Sportfits、Neptune（404）；澳洲几家、Altitude Sports、Last Hunt（非 Shopify）。SportsShoes 后来用“整款单价”模式重新接入了
+- [ ] Poshmark 6 条二手即将合并推送；利润按 ¥1050 算偏高（见第 19 项）
+- [ ] 比价聚合站 idealo.de / geizhals / PriceRunner 未探测
