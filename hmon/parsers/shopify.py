@@ -86,6 +86,9 @@ def scan(cfg: dict) -> StoreResult:
                 status, note = UNKNOWN, "店铺未跟踪库存"
             else:
                 status, note = (IN if v.get("available") else OUT), ""
+            cmp_at, price = v.get("compare_at_price") or 0, v.get("price") or 0
+            if cmp_at > price > 0:
+                note = "；".join(x for x in (note, f"原价 {cmp_at / 100:g}（现价约 {price / cmp_at * 10:.1f} 折）") if x)
             color = " / ".join(
                 o for i, o in enumerate(v.get("options") or []) if i != size_idx and o
             )

@@ -20,6 +20,8 @@ rules:
   fail_alert_after: 3     # 连续几次抓取失败发“监控失效”
   max_separate_alerts: 5  # 一轮超过几条就合并成一条
   digest_hour_bj: 9       # 每天几点（北京时间）后发日报邮件
+  price_drop_pct: 10      # 同一尺码价格连续两轮确认后比之前低这么多（%），就发“降价”提醒；0 = 关闭
+  price_drop_push: true   # 降价提醒是否推送（false = 只进日报）；只有冷门码降价时只进日报
 
 # 不再监控的商品（看过觉得不要的）：不推送、不进日报。
 # store = 店铺 id；product = 商品标识（Shopify 是链接里 /products/ 后面那段）；可选 variant = 具体尺码
@@ -114,3 +116,128 @@ stores:
     region: US
     shipping: 15           # 估算
     enabled: true          # 没配 EBAY_APP_ID / EBAY_CERT_ID 时自动跳过
+
+  # 同一套 eBay 密钥，不用另外申请
+  - id: ebay_gb
+    name: eBay 英国
+    type: ebay
+    marketplace: EBAY_GB
+    search: five ten hiangle
+    currency: GBP
+    region: GB
+    shipping: 5            # 估算
+    enabled: true
+
+  - id: ebay_de
+    name: eBay 德国
+    type: ebay
+    marketplace: EBAY_DE
+    search: five ten hiangle
+    currency: EUR
+    region: DE
+    shipping: 7            # 估算
+    enabled: true
+
+  # ———— 试运行店铺（2026-11-04 加）————
+  # 通过网页搜索找到、但还没实际读过的店。trial: true 的意思：
+  #   读不了不发“监控失效”，只在日报“运行情况”里显示失败原因；读到达标的货照常推送，推送里会注明“试运行”。
+  # 验收：Actions → hiangle-monitor → Run workflow，mode 选 check，store 填店铺 id，对照网页核对尺码和库存。
+  # 验收通过后删掉 trial 这一行；一直失败的整段删掉即可。
+  - id: sportfits
+    name: Sportfits（欧洲）
+    type: shopify
+    domain: sportfits.eu
+    home: https://sportfits.eu/search?q=hiangle
+    currency: EUR
+    region: EU             # 发货国家未确认，转运费按默认 150
+    shipping: 15           # 估算，未确认
+    size_system: AUTO      # 搜索摘要说页面用 UK 码；没写 “UK” 的尺码会标“码制不明”，不乱猜
+    size_verified: false
+    condition: new
+    trial: true            # 有 Hiangle / Hiangle Pro / Hiangle LV，搜索摘要显示部分打折（Pro €136.55，原价 €199.90）
+
+  - id: neptune
+    name: Neptune Mountaineering（美国）
+    type: shopify
+    domain: www.neptunemountaineering.com
+    home: https://www.neptunemountaineering.com/products/five-ten-hiangle
+    currency: USD
+    region: US
+    shipping: 10           # 估算
+    size_system: AUTO      # 尺码写法未确认
+    size_verified: false
+    condition: new
+    trial: true
+
+  - id: snowleader
+    name: Snowleader（法国）
+    type: jsonld
+    urls:
+      - https://www.snowleader.com/en/hiangle-FTEN00084.html
+      - https://www.snowleader.com/en/hiangle-pro-core-black-cloud-white-signal-green-FTEN00092.html
+    product_ids: [hiangle-FTEN00084, hiangle-pro-FTEN00092]
+    home: https://www.snowleader.com/en/hiangle-FTEN00084.html
+    currency: EUR
+    region: FR
+    shipping: 10           # 估算
+    size_system: AUTO
+    size_verified: false
+    trial: true            # 常有“私卖 8 折”；页面有没有逐码数据未确认
+
+  - id: varuste
+    name: Varuste.net（芬兰）
+    type: jsonld
+    urls:
+      - https://varuste.net/en/p59810/five-ten-hiangle
+      - https://varuste.net/en/p103735/five-ten-hiangle-pro
+    product_ids: [p59810, p103735]
+    home: https://varuste.net/en/p59810/five-ten-hiangle
+    currency: EUR
+    region: FI
+    shipping: 10           # 估算
+    size_system: AUTO
+    size_verified: false
+    trial: true
+
+  - id: epictv
+    name: EpicTV Shop（英国）
+    type: jsonld
+    urls:
+      - https://epictv.com/five-ten-hiangle-pro
+      - https://epictv.com/five-ten-hiangle-women-s
+    product_ids: [five-ten-hiangle-pro, five-ten-hiangle-women-s]
+    home: https://epictv.com/five-ten-hiangle-pro
+    currency: GBP
+    region: GB
+    shipping: 5            # 估算
+    size_system: AUTO
+    size_verified: false
+    trial: true
+
+  - id: sportsshoes
+    name: SportsShoes（英国）
+    type: jsonld
+    urls:
+      - https://www.sportsshoes.com/product/fiv238/hiangle-climbing-shoes
+    product_ids: [fiv238]
+    home: https://www.sportsshoes.com/product/fiv238/hiangle-climbing-shoes
+    currency: GBP
+    region: GB
+    shipping: 5            # 估算
+    size_system: AUTO
+    size_verified: false
+    trial: true
+
+  - id: barrabes
+    name: Barrabes（西班牙）
+    type: jsonld
+    urls:
+      - https://www.barrabes.com/en/five.ten-hiangle-pro/p-187650
+    product_ids: [p-187650]
+    home: https://www.barrabes.com/en/five.ten-hiangle-pro/p-187650
+    currency: EUR
+    region: ES
+    shipping: 10           # 估算
+    size_system: AUTO
+    size_verified: false
+    trial: true

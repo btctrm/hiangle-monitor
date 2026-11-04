@@ -31,7 +31,11 @@ def _serverchan(title: str, md: str) -> str:
     m = re.match(r"sctp(\d+)t", key)
     host = f"https://{m.group(1)}.push.ft07.com/send/{key}.send" if m else f"https://sctapi.ftqq.com/{key}.send"
     r = requests.post(host, data={"title": title[:32], "desp": md}, timeout=20)
-    return "Server酱 成功" if r.ok else f"Server酱 失败：{r.text[:120]}"
+    try:
+        ok = r.ok and r.json().get("code") == 0
+    except ValueError:
+        ok = False
+    return "Server酱 成功" if ok else f"Server酱 失败：{r.text[:120]}"
 
 
 def _email(title: str, md: str, html: str | None = None) -> str:
@@ -72,3 +76,12 @@ def send(title: str, md: str, *, wechat: bool = True, email: bool = True, dry: b
     else:
         print(title, "->", "；".join(out))
     return out
+
+
+def delivered(results) -> bool:
+    """至少一个渠道发送成功（演练也算）。"""
+    return any(r == "演练" or str(r).endswith("成功") for r in (results or []))
+
+
+def failures(results) -> list[str]:
+    return [str(r) for r in (results or []) if not (r == "演练" or str(r).endswith("成功"))]
