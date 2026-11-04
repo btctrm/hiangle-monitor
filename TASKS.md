@@ -9,12 +9,19 @@
 - [x] 7. Actions 增加 check（逐码验收）和 probe（探测新店）模式
 - [x] 8. 本地测试 20 个全部通过；Actions 上 check 全部店铺读取正常
 - [x] 9. 推送到 GitHub 分支 claude/gallant-euler-3uzttp（已修复 GitHub App 授权）
-- [ ] 10. **合并到 main 才会生效**（定时任务只跑 main）——等你确认后开 PR
+- [x] 10. 合并到 main（btctrm/hiangle-monitor#1）
 - [ ] 11. 申请 eBay 开发者密钥（EBAY_APP_ID / EBAY_CERT_ID），三个 eBay 站一起生效
 - [ ] 12. 人工看一眼 Geartrade $38.35 女款 4.5 码（成色未知、码制不明；原价 $160）
 - [ ] 13. 人工核对 GearX、EpicTV 的尺码（实测换算：GearX 美码男 12 = UK 11.5；EpicTV 欧码 42 = UK 8），通过后删掉 trial
 
+- [x] 14. 第二批渠道：探测 30+ 个折扣/综合/二手/日本渠道，接入 Bergzeit、SportsShoes（清仓）、Poshmark、Yahoo!购物、乐天
+- [ ] 15. 申请日本接口密钥：YAHOO_JP_APPID（推荐，接口稳定）、RAKUTEN_APP_ID / RAKUTEN_ACCESS_KEY
+- [ ] 16. 第二批合并到 main
+
 ## 新发现的事项
+- [ ] 日本转运费没有报价，暂按 ¥150；有实际报价请改 config.yaml 的 forwarder
+- [ ] Kleinanzeigen（德国二手）能打开但价格不在结构化数据里，需要单独写解析器
+- [ ] Vinted 数据在浏览器端加载，免费方案读不了
 - [x] SpokeX 站内搜索已搜不到 Hiangle（之前靠记住的商品页在读），已写死商品页
 - [ ] SpokeX / Délire / Geartrade 尺码换算仍是推测，待人工验收
 - [ ] Délire 清仓价（C$161）接口拿不到，只会漏报

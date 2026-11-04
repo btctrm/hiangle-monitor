@@ -53,6 +53,20 @@
 | EpicTV Shop | 英国 | 页面结构化数据（欧码） | **能读**：Hiangle Pro 13 个尺码有货 $146.87（到手约 ¥1030）；女款全缺 |
 | GearX / Outdoor Gear Exchange | 美国 | Shopify 库存接口（新旧都卖） | **能读**：Hiangle 男款 2 个尺码有货 $160；女款全缺 |
 
+### 2026-11-04 第二批：折扣 / 综合运动鞋 / 二手 / 日本
+
+| 店铺 | 渠道类型 | 实测 |
+| --- | --- | --- |
+| Bergzeit（德国） | 户外店，季末常打折 | 能读：男款 €155.95，Pro €182.20，逐码 |
+| SportsShoes（英国/德国站） | **综合跑鞋店**，攀岩鞋常被当普通鞋清仓 | 能读：英国站 £59.99（原价 £119.99）、德国站 €49.59（-66%），都缺货；页面不分尺码，有货即推，请自己看码 |
+| Poshmark（美国） | 二手 / 闲置 | 能读：10+ 条 Hiangle，二手 $39 起 |
+| Yahoo!购物（日本） | 综合电商（含 ZOZOTOWN、运动鞋店） | **要密钥**：developer.yahoo.co.jp 注册应用，Client ID 填到 GitHub Secrets 的 `YAHOO_JP_APPID` |
+| 乐天市场（日本） | 综合电商 | **要密钥**：webservice.rakuten.co.jp 注册，填 `RAKUTEN_APP_ID`（新版接口还要 `RAKUTEN_ACCESS_KEY`）；乐天正在换接口地址，填好后需要实测 |
+
+日本国内常规价约 19,800 日元（≈ ¥950），打 8–9 折或叠积分就可能进门槛。日本店一个页面包含多个尺码，接口不给逐码库存，所以统一按“码制不明”（¥850 线）判断。日本转运费暂按 ¥150 算。
+
+读不了：Vinted（数据在浏览器端加载）、Kleinanzeigen（价格不在页面结构化数据里，暂缓）、Mercari 美国 / Sierra / Bike24（403）、CampSaver、Steep & Cheap、Last Hunt、Hardloop、Klimschoenen（比价站，无结构化数据）、乐天/Yahoo 网页版（被拦，只能走接口）。
+
 试过但读不了、已删掉：Snowleader、Bike24（403 拦截）；Varuste.net、SportsShoes、Barrabes、Absolute-Snow（页面没有逐码数据）；Sportfits、Neptune（商品页 404）；Climbing Anchors、Snap Climbing、Wild Earth、Altitude Sports（不是 Shopify）。
 能读但没卖 Hiangle：Rock+Run、Climb On Equipment、Bivouac。
 

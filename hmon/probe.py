@@ -43,12 +43,36 @@ def _shopify(domain: str, query: str) -> list[str]:
     return out
 
 
-def _page(url: str) -> list[str]:
+def _dump(html: str) -> list[str]:
+    """导出页面样本，用来写新解析器：JSON-LD 开头、内嵌数据脚本、Hiangle 附近的原文。"""
+    out = []
+    for block in _LD.findall(html)[:4]:
+        out.append("  [JSON-LD] " + re.sub(r"\s+", " ", block)[:1200])
+    for m in re.finditer(r'<script[^>]*(?:id="(__NEXT_DATA__|__NUXT_DATA__)"|type="application/json")[^>]*>(.*?)</script>', html, re.S):
+        body = m.group(2)
+        i = body.lower().find("hiangle")
+        if i >= 0:
+            out.append(f"  [内嵌 JSON {m.group(1) or 'application/json'}，{len(body)} 字节] …" + body[max(0, i - 600):i + 900] + "…")
+            break
+    for m in re.finditer(r"window\.(__[A-Z_]+__|[A-Za-z_]*[Ss]tate)\s*=", html):
+        out.append(f"  [内嵌变量] {m.group(0)} 位置 {m.start()}")
+    body = max(html.find("<body"), 0)  # 跳过 <head>，看正文里商品卡片的写法
+    for n, m in enumerate(re.finditer(r"hiangle", html[body:], re.I)):
+        if n >= 3:
+            break
+        i = body + m.start()
+        out.append("  [正文] …" + re.sub(r"\s+", " ", html[max(0, i - 400):i + 700]) + "…")
+    return out
+
+
+def _page(url: str, dump: bool = False) -> list[str]:
     out = []
     try:
         html = fetch(url, retries=1)
     except FetchError as e:
         return [f"  页面：失败（{e}）"]
+    if dump:
+        out += _dump(html)
     out.append(f"  页面：成功，{len(html)} 字节{'，是 Shopify 店' if 'cdn.shopify.com' in html else ''}")
     types, group, offers = [], None, []
     for block in _LD.findall(html):
@@ -86,6 +110,8 @@ def _page(url: str) -> list[str]:
 
 
 def probe(targets: list[str], query: str = "hiangle") -> int:
+    dump = "--dump" in targets  # targets 里加 --dump：额外导出页面样本
+    targets = [t for t in targets if t != "--dump"]
     for t in targets:
         t = t.strip()
         if not t:
@@ -93,7 +119,7 @@ def probe(targets: list[str], query: str = "hiangle") -> int:
         print(f"\n### {t}")
         if "/" in t.replace("https://", "").replace("http://", ""):
             url = t if t.startswith("http") else "https://" + t
-            lines = _page(url)
+            lines = _page(url, dump)
         else:
             lines = _shopify(t.replace("https://", "").replace("http://", "").strip("/"), query)
         print("\n".join(lines), flush=True)

@@ -32,6 +32,36 @@ def _find_group(obj):
     return None
 
 
+def _find_product(html: str):
+    for block in _LD.findall(html):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        for it in data if isinstance(data, list) else [data]:
+            if isinstance(it, dict) and it.get("@type") == "Product" and it.get("offers"):
+                return it
+    return None
+
+
+def _single(cfg: dict, pid: str, url: str, prod: dict) -> Obs:
+    """页面只有一个总价、不分尺码（如 SportsShoes）：整款记一条，“有货”= 至少一个尺码能买。"""
+    off = prod.get("offers")
+    if isinstance(off, list):
+        off = off[0] if off else {}
+    if off.get("@type") == "AggregateOffer":
+        off = dict(off, price=off.get("lowPrice") or off.get("price"))
+    avail = str(off.get("availability", "")).rsplit("/", 1)[-1]
+    status = IN if avail == "InStock" else OUT if avail in ("OutOfStock", "SoldOut", "Discontinued") else UNKNOWN
+    return Obs(
+        store=cfg["id"], product_id=pid, title=prod.get("name", ""), url=url, variant_id="all",
+        raw_size="整款（页面不分尺码）", uk=None, color=str(prod.get("color", "")),
+        price=float(off["price"]) if off.get("price") not in (None, "") else None,
+        currency=off.get("priceCurrency") or cfg.get("currency", ""), status=status, condition="new",
+        note="页面只给整款库存，请打开确认你要的码有货",
+    )
+
+
 def scan(cfg: dict) -> StoreResult:
     sid = cfg["id"]
     res = StoreResult(store=sid, ok=True)
@@ -52,6 +82,12 @@ def scan(cfg: dict) -> StoreResult:
                 continue
             if group:
                 break
+        if not group and cfg.get("single_offer"):
+            prod = _find_product(html)
+            if prod:
+                res.products_checked.add(pid)
+                res.obs.append(_single(cfg, pid, url, prod))
+                continue
         if not group:
             return StoreResult(store=sid, ok=False, error=f"{url}: 找不到逐码库存数据（可能改版或被拦截）")
         res.products_checked.add(pid)

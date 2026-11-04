@@ -30,7 +30,7 @@ _UNICODE_FRAC = {"⅓": " 1/3", "⅔": " 2/3", "½": ".5"}
 
 
 def _norm(s: str) -> str:
-    s = str(s).strip()
+    s = str(s).strip().replace("’", "'").replace("‘", "'")
     for k, v in _UNICODE_FRAC.items():
         s = s.replace(k, v)
     s = s.replace(",", ".")
@@ -81,7 +81,7 @@ def to_uk(raw: str, system: str, gender: str | None = None) -> float | None:
             if n is None or g not in ("M", "W"):
                 return None
             return _valid_uk(n - (0.5 if g == "M" else 1.5))
-        m = re.search(r"\b(Men'?s|Mens|Women'?s|Womens)\s*([\d.]+)", s, re.I)
+        m = re.search(r"\b(Men'?s|Mens|Women'?s|Womens)\s*(?:US\s*)?(?:Size\s*)?([\d.]+)", s, re.I)
         if m:  # 如 “Mens 11/Womens 12”：美码男/女
             n = _num(m.group(2))
             g = "W" if m.group(1).lower().startswith("w") else "M"
@@ -113,7 +113,7 @@ def _valid_uk(x: float | None) -> float | None:
 
 
 def gender_from_title(title: str) -> str | None:
-    t = title.lower()
+    t = title.lower().replace("’", "'")
     if re.search(r"women|womens|wmn|damen|femme|レディース", t):
         return "W"
     if re.search(r"\bmen'?s\b|\bmens\b|herren|homme|メンズ", t):

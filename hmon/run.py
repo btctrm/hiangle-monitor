@@ -19,14 +19,14 @@ import yaml
 from . import notify
 from .core import IN, OUT, UNKNOWN, Obs, StoreResult
 from .money import PUSH_TIERS, TIER_LABEL, TIER_RANK, evaluate, rates
-from .parsers import bergfreunde, ebay, jsonld, shopify
+from .parsers import bergfreunde, ebay, japan, jsonld, poshmark, shopify
 import html as _h
 
 from .sizes import eu_of, fmt_uk, size_line, size_short
 
 ROOT = Path(__file__).resolve().parent.parent
 BJ = timezone(timedelta(hours=8))
-PARSERS = {"shopify": shopify, "bergfreunde": bergfreunde, "jsonld": jsonld, "ebay": ebay}
+PARSERS = {"shopify": shopify, "bergfreunde": bergfreunde, "jsonld": jsonld, "ebay": ebay, "japan": japan, "poshmark": poshmark}
 COND_LABEL = {"used": "【二手】", "unknown": "【成色未知】", "new": ""}
 CUR = {"USD": "$", "EUR": "€", "GBP": "£", "CAD": "C$", "JPY": "¥", "CNY": "¥"}
 
@@ -559,8 +559,12 @@ def main(argv=None):
     sub.add_parser("test-notify", help="发一条测试通知")
     sub.add_parser("digest", help="立即生成日报（只打印）")
     pr = sub.add_parser("probe", help="探测候选店铺能不能读（不改状态、不发通知）")
-    pr.add_argument("targets", nargs="+", help="域名（按 Shopify 试）或商品链接")
-    a = ap.parse_args(argv)
+    pr.add_argument("targets", nargs="+", help="域名（按 Shopify 试）或商品链接；加 --dump 导出页面样本")
+    a, extra = ap.parse_known_args(argv)
+    if extra and a.cmd != "probe":
+        ap.error("未知参数：" + " ".join(extra))
+    if a.cmd == "probe":
+        a.targets += extra
     if a.cmd == "probe":
         from .probe import probe
 

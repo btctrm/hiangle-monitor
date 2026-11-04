@@ -46,6 +46,9 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
           EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
           EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          YAHOO_JP_APPID: ${{ secrets.YAHOO_JP_APPID }}
+          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
           IN_STORE: ${{ github.event.inputs.store }}
           IN_TARGETS: ${{ github.event.inputs.targets }}
         run: |
