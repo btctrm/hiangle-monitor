@@ -6,10 +6,18 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "run = 正常跑一轮；dry = 演练不发通知；test-notify = 发测试通知"
+        description: "run = 正常跑一轮；dry = 演练不发通知；test-notify = 发测试通知；check = 逐码打印解析结果；probe = 探测候选店铺"
         default: run
         type: choice
-        options: [run, dry, test-notify]
+        options: [run, dry, test-notify, check, probe]
+      store:
+        description: "check 用：店铺 id，填 all = 全部"
+        default: all
+        required: false
+      targets:
+        description: "probe 用：域名或商品链接，空格/逗号分隔"
+        default: ""
+        required: false
 
 permissions:
   contents: write
@@ -38,9 +46,13 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
           EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
           EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          IN_STORE: ${{ github.event.inputs.store }}
+          IN_TARGETS: ${{ github.event.inputs.targets }}
         run: |
           MODE="${{ github.event.inputs.mode || 'run' }}"
           if [ "$MODE" = "test-notify" ]; then python -m hmon test-notify; exit 0; fi
+          if [ "$MODE" = "check" ]; then python -m hmon check "${IN_STORE:-all}"; exit 0; fi
+          if [ "$MODE" = "probe" ]; then python -m hmon probe $IN_TARGETS; exit 0; fi
           if [ "$MODE" = "dry" ]; then python -m hmon run --dry-run; exit 0; fi
           python -m hmon run
       - name: 保存状态

@@ -384,10 +384,25 @@ def main(argv=None):
     c.add_argument("store")
     sub.add_parser("test-notify", help="发一条测试通知")
     sub.add_parser("digest", help="立即生成日报（只打印）")
+    pr = sub.add_parser("probe", help="探测候选店铺能不能读（不改状态、不发通知）")
+    pr.add_argument("targets", nargs="+", help="域名（按 Shopify 试）或商品链接")
     a = ap.parse_args(argv)
+    if a.cmd == "probe":
+        from .probe import probe
+
+        targets = [x for t in a.targets for x in t.replace(",", " ").split()]
+        return probe(targets)
     if a.cmd == "run":
         return run(dry=a.dry_run, only=a.only, state_path=Path(a.state) if a.state else None)
     if a.cmd == "check":
+        if a.store == "all":
+            for s in load_cfg()["stores"]:
+                if s.get("enabled", True):
+                    try:
+                        check(s["id"])
+                    except Exception as e:  # 一家出错不影响其他家
+                        print(f"{s['id']}  解析器异常：{e}")
+            return 0
         return check(a.store)
     if a.cmd == "test-notify":
         notify.send("【测试】Hiangle 监控通知", f"如果你看到这条，说明通知渠道配置成功。\n\n时间：{ts()}")
