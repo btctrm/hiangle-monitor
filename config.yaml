@@ -66,6 +66,7 @@ stores:
     size_system: US_M      # 店铺只写数字，按美码男款推测，待验收
     size_verified: false
     condition: new
+    handles: [adidas-five-ten-hiangle-climbing-shoe]   # 2026-11-04 实测站内搜索搜不到它了，写死商品页
 
   - id: delire
     name: Délire Escalade（加拿大）
@@ -78,6 +79,7 @@ stores:
     size_system: US_M      # 推测，待验收
     size_verified: false
     condition: new
+    handles: [five-ten-hiangle-pro]
     # 注意：页面实际显示清仓价 C$161（-30%），但接口给的是原价 C$230，
     # 折扣是结账/前台插件算的，程序拿不到 → 这家店的到手成本会偏高（只会漏报，不会误报）
 
@@ -154,6 +156,14 @@ stores:
     size_system: AUTO      # 搜索摘要说页面用 UK 码；没写 “UK” 的尺码会标“码制不明”，不乱猜
     size_verified: false
     condition: new
+    discover: false        # 2026-11-04 实测站内搜索接口 404，直接读商品页
+    handles:
+      - five-ten-hiangle-climbing-shoes
+      - five-ten-hiangle-climbing-shoes-109121
+      - five-ten-hiangle-pro-climbing-shoes
+      - five-ten-hiangle-pro-climbing-shoes-men
+      - five-ten-hiangle-lv-climbing-shoes
+      - five-ten-hiangle-lv-climbing-shoes-women
     trial: true            # 有 Hiangle / Hiangle Pro / Hiangle LV，搜索摘要显示部分打折（Pro €136.55，原价 €199.90）
 
   - id: neptune
@@ -167,36 +177,7 @@ stores:
     size_system: AUTO      # 尺码写法未确认
     size_verified: false
     condition: new
-    trial: true
-
-  - id: snowleader
-    name: Snowleader（法国）
-    type: jsonld
-    urls:
-      - https://www.snowleader.com/en/hiangle-FTEN00084.html
-      - https://www.snowleader.com/en/hiangle-pro-core-black-cloud-white-signal-green-FTEN00092.html
-    product_ids: [hiangle-FTEN00084, hiangle-pro-FTEN00092]
-    home: https://www.snowleader.com/en/hiangle-FTEN00084.html
-    currency: EUR
-    region: FR
-    shipping: 10           # 估算
-    size_system: AUTO
-    size_verified: false
-    trial: true            # 常有“私卖 8 折”；页面有没有逐码数据未确认
-
-  - id: varuste
-    name: Varuste.net（芬兰）
-    type: jsonld
-    urls:
-      - https://varuste.net/en/p59810/five-ten-hiangle
-      - https://varuste.net/en/p103735/five-ten-hiangle-pro
-    product_ids: [p59810, p103735]
-    home: https://varuste.net/en/p59810/five-ten-hiangle
-    currency: EUR
-    region: FI
-    shipping: 10           # 估算
-    size_system: AUTO
-    size_verified: false
+    handles: [five-ten-hiangle]   # 2026-11-04 实测站内搜索搜不到，写死商品页
     trial: true
 
   - id: epictv
@@ -207,37 +188,9 @@ stores:
       - https://epictv.com/five-ten-hiangle-women-s
     product_ids: [five-ten-hiangle-pro, five-ten-hiangle-women-s]
     home: https://epictv.com/five-ten-hiangle-pro
-    currency: GBP
+    currency: USD          # 以页面标注为准（GitHub 服务器在美国，2026-11-04 实测页面给的是美元）
     region: GB
     shipping: 5            # 估算
-    size_system: AUTO
+    size_system: EU        # 2026-11-04 实测：尺码写 “38 2/3” 这种欧码，不带 EU 字样
     size_verified: false
-    trial: true
-
-  - id: sportsshoes
-    name: SportsShoes（英国）
-    type: jsonld
-    urls:
-      - https://www.sportsshoes.com/product/fiv238/hiangle-climbing-shoes
-    product_ids: [fiv238]
-    home: https://www.sportsshoes.com/product/fiv238/hiangle-climbing-shoes
-    currency: GBP
-    region: GB
-    shipping: 5            # 估算
-    size_system: AUTO
-    size_verified: false
-    trial: true
-
-  - id: barrabes
-    name: Barrabes（西班牙）
-    type: jsonld
-    urls:
-      - https://www.barrabes.com/en/five.ten-hiangle-pro/p-187650
-    product_ids: [p-187650]
-    home: https://www.barrabes.com/en/five.ten-hiangle-pro/p-187650
-    currency: EUR
-    region: ES
-    shipping: 10           # 估算
-    size_system: AUTO
-    size_verified: false
-    trial: true
+    trial: true            # 2026-11-04 实测能读：Hiangle Pro 13 个尺码有货 $146.87

@@ -45,18 +45,16 @@
 
 读不了的（会被拦截）：BananaFingers、Adidas 官网、Backcountry、Bike24、Oliunid、SportScheck、ZOZO。免费方案先不接。
 
-### 2026-11-04 新增（试运行，未实测）
+### 2026-11-04 新增（试运行）
 
-| 店铺 | 地区 | 怎么读 | 状态 |
+| 店铺 | 地区 | 怎么读 | 2026-11-04 在 GitHub 上实测 |
 | --- | --- | --- | --- |
-| eBay 英国、eBay 德国 | 英 / 德 | 官方接口，和 eBay 美国共用一套密钥 | 填了密钥才会跑；德国站有不少 Hiangle Pro 新鞋/二手 |
-| Sportfits | 欧洲 | Shopify 库存接口 | 搜索摘要确认有 Hiangle / Pro / LV，部分打折 |
-| Neptune Mountaineering | 美国 | Shopify 库存接口 | 有 Hiangle 商品页 |
-| Snowleader | 法国 | 页面结构化数据 | 常有私卖 8 折；页面能不能读未确认 |
-| Varuste.net | 芬兰 | 页面结构化数据 | 未确认 |
-| EpicTV Shop | 英国 | 页面结构化数据 | 未确认 |
-| SportsShoes | 英国 | 页面结构化数据 | 未确认 |
-| Barrabes | 西班牙 | 页面结构化数据 | 未确认 |
+| eBay 英国、eBay 德国 | 英 / 德 | 官方接口，和 eBay 美国共用一套密钥 | 没密钥，跳过；德国站有不少 Hiangle Pro 新鞋/二手 |
+| EpicTV Shop | 英国 | 页面结构化数据（欧码） | **能读**：Hiangle Pro 13 个尺码有货 $146.87（到手约 ¥1030）；女款全缺 |
+| Sportfits | 欧洲 | Shopify 商品页（站内搜索接口 404，直接读写死的商品页） | 待复测 |
+| Neptune Mountaineering | 美国 | Shopify 商品页（站内搜索搜不到，直接读商品页） | 待复测 |
+
+试过但读不了、已删掉：Snowleader（403 拦截）、Varuste.net、SportsShoes、Barrabes（页面没有逐码数据）。
 
 这些店在 config.yaml 里标了 `trial: true`（试运行）：读不了**不发“监控失效”**，只在日报“运行情况”里显示原因；读到达标的货照常推，推送里注明“试运行，请核实”。
 验收方法：Actions → hiangle-monitor → Run workflow，mode 选 `check`，store 填店铺 id（或 `all`），对照网页核对尺码和库存。通过就删掉 `trial: true`；一直失败就把整段删掉。

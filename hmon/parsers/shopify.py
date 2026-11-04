@@ -54,7 +54,8 @@ def scan(cfg: dict) -> StoreResult:
     res = StoreResult(store=sid, ok=True)
     must = [w.lower() for w in cfg.get("title_must", ["hiangle"])]
     try:
-        found = _discover(domain, cfg.get("search", "hiangle"))
+        # discover: false = 店铺站内搜索接口用不了，只读 handles 里写死的商品页
+        found = _discover(domain, cfg.get("search", "hiangle")) if cfg.get("discover", True) else []
     except FetchError as e:
         return StoreResult(store=sid, ok=False, error=f"搜索失败：{e}")
     handles = {h for h, t in found if all(w in t.lower() for w in must)}
