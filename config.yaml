@@ -145,40 +145,19 @@ stores:
   #   读不了不发“监控失效”，只在日报“运行情况”里显示失败原因；读到达标的货照常推送，推送里会注明“试运行”。
   # 验收：Actions → hiangle-monitor → Run workflow，mode 选 check，store 填店铺 id，对照网页核对尺码和库存。
   # 验收通过后删掉 trial 这一行；一直失败的整段删掉即可。
-  - id: sportfits
-    name: Sportfits（欧洲）
+  - id: gearx
+    name: GearX / Outdoor Gear Exchange（美国）
     type: shopify
-    domain: sportfits.eu
-    home: https://sportfits.eu/search?q=hiangle
-    currency: EUR
-    region: EU             # 发货国家未确认，转运费按默认 150
-    shipping: 15           # 估算，未确认
-    size_system: AUTO      # 搜索摘要说页面用 UK 码；没写 “UK” 的尺码会标“码制不明”，不乱猜
-    size_verified: false
-    condition: new
-    discover: false        # 2026-11-04 实测站内搜索接口 404，直接读商品页
-    handles:
-      - five-ten-hiangle-climbing-shoes
-      - five-ten-hiangle-climbing-shoes-109121
-      - five-ten-hiangle-pro-climbing-shoes
-      - five-ten-hiangle-pro-climbing-shoes-men
-      - five-ten-hiangle-lv-climbing-shoes
-      - five-ten-hiangle-lv-climbing-shoes-women
-    trial: true            # 有 Hiangle / Hiangle Pro / Hiangle LV，搜索摘要显示部分打折（Pro €136.55，原价 €199.90）
-
-  - id: neptune
-    name: Neptune Mountaineering（美国）
-    type: shopify
-    domain: www.neptunemountaineering.com
-    home: https://www.neptunemountaineering.com/products/five-ten-hiangle
+    domain: gearx.com
+    home: https://www.gearx.com/search?q=hiangle
     currency: USD
     region: US
     shipping: 10           # 估算
-    size_system: AUTO      # 尺码写法未确认
+    size_system: US        # 尺码选项名写 “Footwear Size (Men's)/(Women's)”，按美码男/女换算
     size_verified: false
-    condition: new
-    handles: [five-ten-hiangle]   # 2026-11-04 实测站内搜索搜不到，写死商品页
-    trial: true
+    condition: tags        # 这家新旧都卖；带 Used 标签或标题写 used 的算二手，其余记“成色未知”
+    used_tags: [Used, used, Used Gear]
+    trial: true            # 2026-11-04 实测能读：Hiangle 男款 11 个尺码 2 个有货 $160；女款全缺
 
   - id: epictv
     name: EpicTV Shop（英国）

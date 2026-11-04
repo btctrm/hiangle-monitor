@@ -75,9 +75,12 @@ def scan(cfg: dict) -> StoreResult:
         res.products_checked.add(h)
         opts = [o.get("name", "").lower() if isinstance(o, dict) else str(o).lower() for o in p.get("options", [])]
         size_idx = next((i for i, n in enumerate(opts) if n in SIZE_OPTION_NAMES), None)
+        if size_idx is None:  # 如 GearX 的 “Footwear Size (Men's)”
+            size_idx = next((i for i, n in enumerate(opts) if any(k in n for k in SIZE_OPTION_NAMES)), None)
         if size_idx is None and len(opts) == 1:
             size_idx = 0
-        gender = cfg.get("gender") or gender_from_title(title)
+        # 尺码选项名里写了男女（如 “(Men's)”）就以它为准
+        gender = cfg.get("gender") or (gender_from_title(opts[size_idx]) if size_idx is not None else None) or gender_from_title(title)
         cond = _condition(cfg, p)
         for v in p.get("variants", []):
             raw = (v.get("options") or [None] * 3)[size_idx] if size_idx is not None else v.get("title", "")

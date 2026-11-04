@@ -51,10 +51,10 @@
 | --- | --- | --- | --- |
 | eBay 英国、eBay 德国 | 英 / 德 | 官方接口，和 eBay 美国共用一套密钥 | 没密钥，跳过；德国站有不少 Hiangle Pro 新鞋/二手 |
 | EpicTV Shop | 英国 | 页面结构化数据（欧码） | **能读**：Hiangle Pro 13 个尺码有货 $146.87（到手约 ¥1030）；女款全缺 |
-| Sportfits | 欧洲 | Shopify 商品页（站内搜索接口 404，直接读写死的商品页） | 待复测 |
-| Neptune Mountaineering | 美国 | Shopify 商品页（站内搜索搜不到，直接读商品页） | 待复测 |
+| GearX / Outdoor Gear Exchange | 美国 | Shopify 库存接口（新旧都卖） | **能读**：Hiangle 男款 2 个尺码有货 $160；女款全缺 |
 
-试过但读不了、已删掉：Snowleader（403 拦截）、Varuste.net、SportsShoes、Barrabes（页面没有逐码数据）。
+试过但读不了、已删掉：Snowleader、Bike24（403 拦截）；Varuste.net、SportsShoes、Barrabes、Absolute-Snow（页面没有逐码数据）；Sportfits、Neptune（商品页 404）；Climbing Anchors、Snap Climbing、Wild Earth、Altitude Sports（不是 Shopify）。
+能读但没卖 Hiangle：Rock+Run、Climb On Equipment、Bivouac。
 
 这些店在 config.yaml 里标了 `trial: true`（试运行）：读不了**不发“监控失效”**，只在日报“运行情况”里显示原因；读到达标的货照常推，推送里注明“试运行，请核实”。
 验收方法：Actions → hiangle-monitor → Run workflow，mode 选 `check`，store 填店铺 id（或 `all`），对照网页核对尺码和库存。通过就删掉 `trial: true`；一直失败就把整段删掉。
