@@ -7,7 +7,7 @@ profit:
   fx_fee: 0.015           # 信用卡换汇损耗
   forwarder:              # 每双转运费（元），按店铺所在地区
     US: 100               # QQEX 包税 50–100，按最贵算
-    default: 150          # 其他国家暂无报价，保守估
+    default: 150          # 其他国家暂无报价，保守估（日本也暂按这个算，有报价请改）
 
 thresholds:               # 按“到手成本”（标价+店铺运费，换成人民币）判断
   core_uk: [4, 9]         # 主力码 UK 4–9（≈ EU 36⅔–43⅓）
@@ -173,3 +173,70 @@ stores:
     size_system: EU        # 2026-11-04 实测：尺码写 “38 2/3” 这种欧码，不带 EU 字样
     size_verified: false
     trial: true            # 2026-11-04 实测能读：Hiangle Pro 13 个尺码有货 $146.87
+
+  # ———— 2026-11-04 第二批：折扣 / 综合运动鞋 / 二手渠道（都在 GitHub 上实测过）————
+  - id: bergzeit
+    name: Bergzeit（德国）
+    type: jsonld
+    urls:
+      - https://www.bergzeit.de/p/adidas-five-ten-hiangle-kletterschuhe/3007435/
+      - https://www.bergzeit.de/p/adidas-five-ten-damen-hiangle-kletterschuhe/3007436/
+      - https://www.bergzeit.de/p/adidas-five-ten-hiangle-pro-kletterschuhe/3008209/
+    product_ids: [hiangle-3007435, hiangle-damen-3007436, hiangle-pro-3008209]
+    home: https://www.bergzeit.de/search/?q=hiangle
+    currency: EUR
+    region: DE
+    shipping: 0            # 估算（德国境内常见满额免邮）
+    size_system: AUTO      # 页面写 “UK 6”
+    size_verified: false
+    trial: true            # 实测：男款 14 码 €155.95，Pro 16 码 €182.20；常有季末打折
+
+  - id: sportsshoes
+    name: SportsShoes（英国，综合跑鞋店）
+    type: jsonld
+    single_offer: true     # 页面只给整款一个价、一个库存状态，不分尺码
+    urls:
+      - https://www.sportsshoes.com/product/fiv238/hiangle-climbing-shoes
+      - https://www.sportsshoes.com/de-de/product/fiv131/five-ten-hiangle-kletterschuhe
+    product_ids: [fiv238, fiv131]
+    home: https://www.sportsshoes.com/product/fiv238/hiangle-climbing-shoes
+    currency: GBP
+    region: GB
+    shipping: 5            # 估算
+    size_verified: false
+    trial: true            # 实测：英国站清仓 £59.99（原价 £119.99），德国站 €49.59（-66%），目前都缺货；补货到手约 ¥600
+
+  - id: poshmark
+    name: Poshmark（美国二手）
+    type: poshmark
+    search: five ten hiangle
+    max_items: 12          # 每轮最多看 12 条（每条要单独打开一次页面）
+    currency: USD
+    region: US
+    shipping: 9            # 估算（Poshmark 美国境内统一运费约 $8–9）
+    size_verified: false
+    trial: true            # 实测：搜索有 10+ 条 Hiangle，例如男 8 码 $39 二手
+
+  # 日本：Five Ten 在日本多在综合鞋店 / ZOZO / 运动用品店卖，常被当普通运动鞋打折、送积分
+  # 国内常规价约 19,800 日元（≈ ¥950），打 8–9 折就接近门槛
+  - id: yahoo_jp
+    name: Yahoo!购物（日本）
+    type: japan
+    api: yahoo_jp
+    search: ファイブテン ハイアングル
+    currency: JPY
+    region: JP
+    shipping: 800          # 估算：日本境内运费（日元）
+    size_verified: false
+    trial: true            # 需要 YAHOO_JP_APPID，没填自动跳过
+
+  - id: rakuten
+    name: 乐天市场（日本）
+    type: japan
+    api: rakuten
+    search: ファイブテン ハイアングル
+    currency: JPY
+    region: JP
+    shipping: 800          # 估算
+    size_verified: false
+    trial: true            # 需要 RAKUTEN_APP_ID（新版还要 RAKUTEN_ACCESS_KEY），没填自动跳过；乐天正在换接口地址，未实测
