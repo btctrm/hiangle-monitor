@@ -25,7 +25,13 @@ _BLOCK_PAT = re.compile(
 )
 
 
-def fetch(url: str, *, expect_json: bool = False, timeout: int = 25, retries: int = 2):
+# 试运行店铺调成只试一次、超时更短（run.scan_store 里设置），免得读不了的店拖慢整轮
+LIMITS = {"timeout": 25, "retries": 2}
+
+
+def fetch(url: str, *, expect_json: bool = False, timeout: int | None = None, retries: int | None = None):
+    timeout = LIMITS["timeout"] if timeout is None else timeout
+    retries = LIMITS["retries"] if retries is None else retries
     last = None
     for attempt in range(retries + 1):
         try:
@@ -51,7 +57,7 @@ def fetch(url: str, *, expect_json: bool = False, timeout: int = 25, retries: in
             return text
         except (requests.RequestException, FetchError) as e:
             last = e
-            if isinstance(e, FetchError) and "404" in str(e):
+            if (isinstance(e, FetchError) and "404" in str(e)) or attempt >= retries:
                 break
             time.sleep(2 + attempt * 3)
     raise FetchError(str(last))

@@ -99,13 +99,111 @@ def is_ignored(cfg: dict, store: str, product_id: str, variant_id: str = "") -> 
     return False
 
 
+def migrate_baseline(st: dict) -> None:
+    """一次性修正：旧版本把“首次扫描时就已达标”的商品记成已推送，其实从没推过。改成待推。"""
+    if st["meta"].get("migr_baseline_v1"):
+        return
+    st["meta"]["migr_baseline_v1"] = True
+    for v in st["variants"].values():
+        base_at = st["stores"].get(v.get("store"), {}).get("baseline_at")
+        if (v.get("status") == IN and v.get("tier") in PUSH_TIERS and v.get("notified_tier") == v.get("tier")
+                and not v.get("notified_at") and base_at and (v.get("first_in") or "") <= base_at):
+            v["notified_tier"] = None
+            v["baseline_carry"] = True
+
+
+def limit_of(cfg: dict, uk) -> int:
+    """这个尺码适用的推送门槛（到手成本上限）。"""
+    t = cfg["thresholds"]
+    lo, hi = t["core_uk"]
+    if uk is None:
+        return t["normal"]
+    return t["normal"] if lo <= uk <= hi else t["cold"]
+
+
+def track_price(v: dict, price, cfg: dict, drops: dict, o, baselined: bool) -> None:
+    """记录价格变化。连续两轮价格一致（±2%）才算真实价格，避免页面刷新时价格跳动造成误报。"""
+    if price is None:
+        return
+    last = v.get("price_last")
+    v["price_last"] = price
+    if last is None or abs(price - last) > 0.02 * max(price, last):
+        return
+    conf = max(price, last)  # 两轮里较高的那个，保守
+    ref = v.get("price_ref")
+    if ref is not None and abs(conf - ref) <= 0.02 * ref:
+        return
+    hist = v.setdefault("price_hist", [])
+    hist.append([ts(), conf])
+    del hist[:-20]
+    pct = float(cfg["rules"].get("price_drop_pct", 10))
+    if ref is not None and baselined and pct > 0 and conf < ref * (1 - pct / 100):
+        drops.setdefault((o.store, o.product_id, o.color, ref, conf), []).append(v)
+    v["price_ref"] = conf
+
+
+def drop_alerts(cfg: dict, st: dict, drops: dict, now: str) -> list[tuple[str, str]]:
+    """把同一商品同一次降价的所有尺码合成一条。"""
+    stores = {s["id"]: s for s in cfg["stores"]}
+    lo, hi = cfg["thresholds"]["core_uk"]
+    msgs, events = [], st["meta"].setdefault("price_drops", [])
+    for (sid, pid, color, old, new), vs in drops.items():
+        vs = [v for v in vs if v.get("notified_at") != now]  # 本轮已经按门槛推过的不重复推
+        if not vs:
+            continue
+        v0 = vs[0]
+        scfg = stores.get(sid, {})
+        pct = round((1 - new / old) * 100)
+        core = [v for v in vs if v.get("uk") is None or lo <= v["uk"] <= hi]
+        best = min((v.get("landed") or 9e9) for v in vs)
+        sizes = "、".join(size_short(v.get("uk"), v.get("raw_size", "")) for v in sorted(vs, key=lambda x: x.get("uk") or 99))
+        events.append({"time": now, "store": sid, "title": v0.get("title", ""), "color": color, "old": old, "new": new,
+                       "currency": v0.get("currency", ""), "pct": pct, "landed": best, "n": len(vs), "url": v0.get("url", "")})
+        if not cfg["rules"].get("price_drop_push", True) or not core:
+            continue  # 只有冷门码降价：只进日报
+        gap = best - min(limit_of(cfg, v.get("uk")) for v in core)
+        title = f"【降价 -{pct}%】{v0.get('title', '')[:36]} {money(new, v0.get('currency', ''))} · {scfg.get('name', sid)}"
+        body = "\n".join([
+            f"### {title}",
+            f"- **价格**：{money(old, v0.get('currency', ''))} → {money(new, v0.get('currency', ''))}（-{pct}%）",
+            f"- **配色**：{color or '—'}",
+            f"- **有货尺码**：{sizes}",
+            f"- **最低到手成本**：约 ¥{best}，{'已达到推送门槛' if gap <= 0 else f'离门槛还差 ¥{gap}'}",
+            "- **说明**：价格连续两轮确认；还没到门槛的降价也提醒，方便你判断是不是在打折",
+            f"- **链接**：{v0.get('url', '')}",
+        ])
+        msgs.append((title, body))
+    del events[:-30]
+    if len(msgs) > 3:
+        return [(f"【{len(msgs)} 个商品降价】Hiangle 监控", "\n\n---\n\n".join(b for _, b in msgs))]
+    return msgs
+
+
+def note_notify_errors(st: dict, errors: list[str], now: str, dry: bool) -> None:
+    """通知渠道出错：记进日报；每天最多单独提醒一次（能用的渠道会收到）。"""
+    if dry or not errors:
+        return
+    meta = st["meta"]
+    meta["notify_error"] = {"time": now, "errors": sorted(set(errors))[:5]}
+    if meta.get("notify_error_day") != now[:10]:
+        meta["notify_error_day"] = now[:10]
+        notify.send("【通知渠道异常】Hiangle 监控",
+                    "以下通知渠道发送失败，收不到推送的话请检查对应的 Token / 邮箱授权码：\n\n"
+                    + "\n".join(f"- {e}" for e in sorted(set(errors))) + f"\n\n时间：{now}\n\n没发出去的上新提醒会在下一轮自动重发。")
+
+
 def scan_store(scfg: dict, st: dict) -> StoreResult:
     known = sorted({v["product_id"] for k, v in st["variants"].items() if v["store"] == scfg["id"]})
     cfg2 = dict(scfg, _known_products=known)
+    from . import core
+
+    core.LIMITS.update(timeout=15, retries=0) if scfg.get("trial") else core.LIMITS.update(timeout=25, retries=2)
     try:
         return PARSERS[scfg["type"]].scan(cfg2)
     except Exception as e:  # 解析器自身出错：整店未知
         return StoreResult(store=scfg["id"], ok=False, error=f"解析器异常：{e.__class__.__name__}: {e}")
+    finally:
+        core.LIMITS.update(timeout=25, retries=2)
 
 
 def run(dry: bool = False, only: str | None = None, state_path: Path | None = None) -> int:
@@ -115,8 +213,10 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
     st.setdefault("meta", {})
     now = ts()
     confirm_runs = int(cfg["rules"]["confirm_runs"])
-    alerts: list[tuple[str, str]] = []
+    alerts: list[tuple[str, str, list]] = []  # (标题, 正文, [(尺码记录, 推送前的档位)])
     health_msgs: list[tuple[str, str]] = []
+    drops: dict = {}  # 明显降价：(店, 商品, 配色, 旧价, 新价) -> 尺码列表
+    migrate_baseline(st)
     run_log = {"time": now, "stores": {}}
 
     for scfg in cfg["stores"]:
@@ -133,12 +233,12 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
             run_log["stores"][sid] = f"失败：{res.error}"
             for v in mine.values():  # 失败会打断连续确认
                 v["streak"] = 0
-            if ss["fail"] >= cfg["rules"]["fail_alert_after"] and not ss["alerted"]:
+            if ss["fail"] >= cfg["rules"]["fail_alert_after"] and not ss["alerted"] and not scfg.get("trial"):
                 ss["alerted"] = True
                 health_msgs.append((f"【监控失效】{scfg['name']}", f"连续 {ss['fail']} 次抓取失败，这家店的尺码状态现在一律按“未知”处理，不会推有货。\n\n最近错误：{res.error}\n\n时间：{now}"))
             continue
 
-        if ss.get("alerted"):
+        if ss.get("alerted") and not scfg.get("trial"):
             health_msgs.append((f"【监控恢复】{scfg['name']}", f"已恢复正常抓取。时间：{now}"))
         ss.update(fail=0, alerted=False, last_ok=now, last_error="")
         if res.error:  # 例如 eBay 未配置密钥
@@ -198,18 +298,28 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
                 v["first_in"] = now
             v["status"] = IN
 
+            track_price(v, o.price, cfg, drops, o, ss["baseline"])
             if not ss["baseline"]:  # 第一次扫这家店：当前库存记为基线，不算“上新”
-                v["notified_tier"] = ev["tier"]
+                # 达到推送门槛的除外：首次扫描就已在库的好货也要推一次（复查后）
+                v["notified_tier"] = ev["tier"] if ev["tier"] not in PUSH_TIERS else None
+                if ev["tier"] in PUSH_TIERS:
+                    v["baseline_carry"] = True
                 continue
             tier = ev["tier"]
             if tier not in PUSH_TIERS or TIER_RANK[tier] <= TIER_RANK.get(v.get("notified_tier"), 0):
                 continue
             if v["streak"] < confirm_runs:
                 continue  # 等下一轮复查
-            note = ""
+            notes = []
             if ss.get("anomaly"):
-                note = "；".join(x for x in (note, "该店刚出现过大面积同时上新，请重点核实") if x)
-            alerts.append(alert_text(d, ev, scfg, v["first_in"] or now, note))
+                notes.append("该店刚出现过大面积同时上新，请重点核实")
+            if v.pop("baseline_carry", None):
+                notes.append("首次扫描这家店时就已在库，之前没推过")
+            if scfg.get("trial"):
+                notes.append("试运行店铺，解析未经人工验收，请打开链接核实")
+            if v.get("retry"):
+                notes.append(f"上次推送失败，第 {v['retry'] + 1} 次重发")
+            alerts.append((*alert_text(d, ev, scfg, v["first_in"] or now, "；".join(notes)), [(v, v.get("notified_tier"))]))
             v["notified_tier"] = tier
             v["notified_at"] = now
 
@@ -233,15 +343,32 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
     cutoff = ts(now_bj() - timedelta(days=30))
     st["variants"] = {k: v for k, v in st["variants"].items() if v.get("status") == IN or v.get("last_seen", now) >= cutoff}
 
+    # —— 明显降价（没到推送门槛也提醒，黑五/清仓时最有用）——
+    drop_msgs = drop_alerts(cfg, st, drops, now)
+
     # —— 发送 ——
+    #    推送失败（所有渠道都没发出去）：不记为“已推送”，下一轮自动重发。
+    batches = []
     if len(alerts) > cfg["rules"]["max_separate_alerts"]:
-        body = "\n\n---\n\n".join(b for _, b in alerts)
-        notify.send(f"【{len(alerts)} 条上新/降价】Hiangle 监控", body, dry=dry)
+        body = "\n\n---\n\n".join(b for _, b, _ in alerts)
+        batches.append((f"【{len(alerts)} 条上新/降价】Hiangle 监控", body, [x for _, _, refs in alerts for x in refs]))
     else:
-        for t, b in alerts:
-            notify.send(t, b, dry=dry)
-    for t, b in health_msgs:
-        notify.send(t, b, dry=dry)
+        batches += alerts
+    errors = []
+    for t, b, refs in batches:
+        res = notify.send(t, b, dry=dry)
+        errors += notify.failures(res)
+        if not notify.delivered(res):
+            for v, prev in refs:  # 回滚：下一轮重发
+                v["notified_tier"] = prev
+                v.pop("notified_at", None)
+                v["retry"] = v.get("retry", 0) + 1
+        else:
+            for v, _ in refs:
+                v.pop("retry", None)
+    for t, b in drop_msgs + health_msgs:
+        errors += notify.failures(notify.send(t, b, dry=dry))
+    note_notify_errors(st, errors, now, dry)
 
     st["meta"]["last_run"] = now
     st["meta"]["runs_today"] = st["meta"].get("runs_today", 0) + 1 if st["meta"].get("runs_day") == now[:10] else 1
@@ -280,6 +407,27 @@ def digest_text(cfg: dict, st: dict) -> tuple[str, str, str]:
     rows.sort(key=lambda v: (-TIER_RANK.get(v.get("tier"), 0), v["landed"]))
     _, live = rates()
     good = [v for v in rows if v.get("tier") in PUSH_TIERS]
+    # 离门槛最近：同一家店同一款同一价格的尺码合并成一行
+    groups: dict = {}
+    for v in rows:
+        if v.get("tier") in PUSH_TIERS:
+            continue
+        g = groups.setdefault((v["store"], v.get("title"), v.get("color"), v["landed"], limit_of(cfg, v.get("uk"))), [])
+        g.append(v)
+    near = sorted(groups.values(), key=lambda g: min(v["landed"] - limit_of(cfg, v.get("uk")) for v in g))[:5]
+
+    def near_line(g):
+        g = sorted(g, key=lambda v: v.get("uk") if v.get("uk") is not None else 99)
+        v = min(g, key=lambda v: v["landed"] - limit_of(cfg, v.get("uk")))
+        lim = limit_of(cfg, v.get("uk"))
+        sizes = "、".join((f"UK {x['uk']:g}" if x.get("uk") is not None else f"码制不明（{x.get('raw_size', '')}）") for x in g)
+        return v, lim, sizes
+    week_ago = ts(now_bj() - timedelta(days=7))
+    recent_drops = [e for e in st["meta"].get("price_drops", []) if e.get("time", "") >= week_ago][::-1]
+    nerr = st["meta"].get("notify_error")
+    def sname(sid):
+        s = stores.get(sid, {})
+        return s.get("name", sid) + ("（试运行）" if s.get("trial") else "")
     now = ts()
     title = f"Hiangle 日报 {now[:10]}：{len(good)} 个达标 / {len(rows)} 个有货"
 
@@ -290,18 +438,31 @@ def digest_text(cfg: dict, st: dict) -> tuple[str, str, str]:
         t.append(f"- {r['tier']}{COND_LABEL.get(v['condition'], '')}{size_short(v['uk'], v['raw_size'])} 到手¥{r['landed']} 利润≈¥{r['profit']} · {stores.get(v['store'], {}).get('name', v['store'])} · {r['title'][:40]} · {r['url']}")
     if not good:
         t.append("- 暂无")
+    t += ["", "【离门槛最近】（没达标的有货尺码里，到手成本最接近门槛的）"]
+    for g in near:
+        v, lim, sizes = near_line(g)
+        t.append(f"- 到手¥{v['landed']}，门槛 ¥{lim}，还差 ¥{v['landed'] - lim} · {sname(v['store'])} · {v.get('title', '')[:36]} · 尺码 {sizes} · {v.get('url', '')}")
+    if not near:
+        t.append("- 暂无")
+    t += ["", "【近 7 天明显降价】"]
+    for e in recent_drops:
+        t.append(f"- {e['time']} {sname(e['store'])} {e['title'][:36]} {e.get('color', '')[:20]}：{money(e['old'], e['currency'])} → {money(e['new'], e['currency'])}（-{e['pct']}%），{e['n']} 个尺码，最低到手¥{e['landed']}")
+    if not recent_drops:
+        t.append("- 暂无")
     by_store: dict = {}
     for v in rows:
         by_store.setdefault(v["store"], []).append(v)
     for sid, vs in by_store.items():
-        t += ["", f"【{stores.get(sid, {}).get('name', sid)}】{len(vs)} 个有货"]
+        t += ["", f"【{sname(sid)}】{len(vs)} 个有货"]
         for v in sorted(vs, key=lambda x: (x["title"], x["uk"] if x["uk"] is not None else 99)):
             r = _cost_row(v)
             t.append(f"- EU {r['eu']} / UK {r['uk']} / US男 {r['usm']}（原文 {r['raw']}） {r['price']} → 到手¥{r['landed']} 利润≈¥{r['profit']} {r['cond']} · {r['title'][:30]} {r['color'][:20]}")
     t += ["", "【运行情况】", f"- 今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}"]
+    if nerr:
+        t.append(f"- 最近一次通知渠道出错：{nerr['time']} {'；'.join(nerr['errors'])}")
     for sid, ss in st["stores"].items():
         state = f"失败 {ss['fail']} 次：{ss.get('last_error', '')}" if ss.get("fail", 0) else st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
-        t.append(f"- {stores.get(sid, {}).get('name', sid)}：{state}")
+        t.append(f"- {sname(sid)}：{state}")
 
     # ---------- HTML ----------
     css_td = "padding:4px 8px;border-bottom:1px solid #ddd;font-size:13px;white-space:nowrap"
@@ -327,17 +488,30 @@ def digest_text(cfg: dict, st: dict) -> tuple[str, str, str]:
         hp.append("</table>")
     else:
         hp.append("<p>暂无</p>")
+    hp.append("<h3>离门槛最近</h3><ul style='font-size:13px'>")
+    for g in near:
+        v, lim, sizes = near_line(g)
+        hp.append(f"<li>到手 <b>¥{v['landed']}</b>，门槛 ¥{lim}，还差 <b>¥{v['landed'] - lim}</b> · "
+                  f"{_h.escape(sname(v['store']))} · {_h.escape(v.get('title', '')[:36])} · 尺码 {_h.escape(sizes)} · <a href='{_h.escape(v.get('url', ''))}'>打开</a></li>")
+    hp.append("</ul>" if near else "<li>暂无</li></ul>")
+    hp.append("<h3>近 7 天明显降价</h3><ul style='font-size:13px'>")
+    for e in recent_drops:
+        hp.append(f"<li>{e['time']} {_h.escape(sname(e['store']))} {_h.escape(e['title'][:36])}：{_h.escape(money(e['old'], e['currency']))} → "
+                  f"<b>{_h.escape(money(e['new'], e['currency']))}</b>（-{e['pct']}%），{e['n']} 个尺码，最低到手 ¥{e['landed']} · <a href='{_h.escape(e.get('url', ''))}'>打开</a></li>")
+    hp.append("</ul>" if recent_drops else "<li>暂无</li></ul>")
     hp.append("<h3>各店全部有货尺码</h3>")
     for sid, vs in by_store.items():
-        hp.append(f"<h4 style='margin:14px 0 4px'>{_h.escape(stores.get(sid, {}).get('name', sid))} · {len(vs)} 个有货</h4><table style='border-collapse:collapse'><tr>{head}</tr>")
+        hp.append(f"<h4 style='margin:14px 0 4px'>{_h.escape(sname(sid))} · {len(vs)} 个有货</h4><table style='border-collapse:collapse'><tr>{head}</tr>")
         for v in sorted(vs, key=lambda x: (x["title"], x["uk"] if x["uk"] is not None else 99)):
             hp.append(tr(v, v.get("tier") in PUSH_TIERS))
         hp.append("</table>")
     hp.append("<h3>运行情况</h3><ul style='font-size:13px'>")
     hp.append(f"<li>今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}</li>")
+    if nerr:
+        hp.append(f"<li style='color:#b00'>最近一次通知渠道出错：{nerr['time']} {_h.escape('；'.join(nerr['errors']))}</li>")
     for sid, ss in st["stores"].items():
         state = f"失败 {ss['fail']} 次：{ss.get('last_error', '')}" if ss.get("fail", 0) else st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
-        hp.append(f"<li>{_h.escape(stores.get(sid, {}).get('name', sid))}：{_h.escape(state)}</li>")
+        hp.append(f"<li>{_h.escape(sname(sid))}：{_h.escape(state)}</li>")
     hp.append("</ul><p style='color:#888;font-size:12px'>到手成本 = (标价 + 店铺运费估算) × 汇率 × 1.015；预估利润 = 1050 − 国内邮费 − 转运费 − 到手成本。黄色行 = 达到推送门槛。</p></div>")
     return title, "\n".join(t), "".join(hp)
 
@@ -352,7 +526,7 @@ def maybe_digest(cfg: dict, st: dict, dry: bool) -> None:
         if first:
             t = "【首次运行】" + t
         sent = notify.send(t, b, wechat=first, email=True, dry=dry, html=h)
-        if dry or not sent:
+        if dry or not notify.delivered(sent):
             return  # 还没配置通知渠道（或演练）：不记为已发送，配好后会补发
         st["meta"]["last_digest"] = today
         st["meta"]["first_summary_sent"] = True
@@ -384,10 +558,25 @@ def main(argv=None):
     c.add_argument("store")
     sub.add_parser("test-notify", help="发一条测试通知")
     sub.add_parser("digest", help="立即生成日报（只打印）")
+    pr = sub.add_parser("probe", help="探测候选店铺能不能读（不改状态、不发通知）")
+    pr.add_argument("targets", nargs="+", help="域名（按 Shopify 试）或商品链接")
     a = ap.parse_args(argv)
+    if a.cmd == "probe":
+        from .probe import probe
+
+        targets = [x for t in a.targets for x in t.replace(",", " ").split()]
+        return probe(targets)
     if a.cmd == "run":
         return run(dry=a.dry_run, only=a.only, state_path=Path(a.state) if a.state else None)
     if a.cmd == "check":
+        if a.store == "all":
+            for s in load_cfg()["stores"]:
+                if s.get("enabled", True):
+                    try:
+                        check(s["id"])
+                    except Exception as e:  # 一家出错不影响其他家
+                        print(f"{s['id']}  解析器异常：{e}")
+            return 0
         return check(a.store)
     if a.cmd == "test-notify":
         notify.send("【测试】Hiangle 监控通知", f"如果你看到这条，说明通知渠道配置成功。\n\n时间：{ts()}")

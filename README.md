@@ -45,6 +45,30 @@
 
 读不了的（会被拦截）：BananaFingers、Adidas 官网、Backcountry、Bike24、Oliunid、SportScheck、ZOZO。免费方案先不接。
 
+### 2026-11-04 新增（试运行）
+
+| 店铺 | 地区 | 怎么读 | 2026-11-04 在 GitHub 上实测 |
+| --- | --- | --- | --- |
+| eBay 英国、eBay 德国 | 英 / 德 | 官方接口，和 eBay 美国共用一套密钥 | 没密钥，跳过；德国站有不少 Hiangle Pro 新鞋/二手 |
+| EpicTV Shop | 英国 | 页面结构化数据（欧码） | **能读**：Hiangle Pro 13 个尺码有货 $146.87（到手约 ¥1030）；女款全缺 |
+| GearX / Outdoor Gear Exchange | 美国 | Shopify 库存接口（新旧都卖） | **能读**：Hiangle 男款 2 个尺码有货 $160；女款全缺 |
+
+试过但读不了、已删掉：Snowleader、Bike24（403 拦截）；Varuste.net、SportsShoes、Barrabes、Absolute-Snow（页面没有逐码数据）；Sportfits、Neptune（商品页 404）；Climbing Anchors、Snap Climbing、Wild Earth、Altitude Sports（不是 Shopify）。
+能读但没卖 Hiangle：Rock+Run、Climb On Equipment、Bivouac。
+
+这些店在 config.yaml 里标了 `trial: true`（试运行）：读不了**不发“监控失效”**，只在日报“运行情况”里显示原因；读到达标的货照常推，推送里注明“试运行，请核实”。
+验收方法：Actions → hiangle-monitor → Run workflow，mode 选 `check`，store 填店铺 id（或 `all`），对照网页核对尺码和库存。通过就删掉 `trial: true`；一直失败就把整段删掉。
+
+想试新店：mode 选 `probe`，targets 填域名（如 `sportfits.eu`，按 Shopify 试）或商品链接，日志里会写能不能读、有没有逐码数据。
+
+### 2026-11-04 新增的规则
+
+- **推送失败会重发**：微信和邮件都没发出去时，不算“已推送”，下一轮自动重发；渠道出错每天单独提醒一次，日报里也会显示。
+- **首次扫描就已达标的货也推一次**：以前会被当成“基线”静默记录（Geartrade 那双 $38 女款 4.5 码就是这样一直没推过）。
+- **降价提醒**：同一尺码价格连续两轮确认后比之前低 10% 以上，就推一条“降价”（还没到门槛也推，方便黑五/清仓时判断）。`price_drop_pct` 改幅度，`price_drop_push: false` 改成只进日报。
+- **日报新增**：“离门槛最近”前 5 名（差多少钱）、“近 7 天明显降价”。
+- Shopify 店有划线原价的，推送备注里写原价和折扣。
+
 ---
 
 ## 部署（约 20 分钟，全部免费）

@@ -54,7 +54,8 @@ def scan(cfg: dict) -> StoreResult:
     res = StoreResult(store=sid, ok=True)
     must = [w.lower() for w in cfg.get("title_must", ["hiangle"])]
     try:
-        found = _discover(domain, cfg.get("search", "hiangle"))
+        # discover: false = 店铺站内搜索接口用不了，只读 handles 里写死的商品页
+        found = _discover(domain, cfg.get("search", "hiangle")) if cfg.get("discover", True) else []
     except FetchError as e:
         return StoreResult(store=sid, ok=False, error=f"搜索失败：{e}")
     handles = {h for h, t in found if all(w in t.lower() for w in must)}
@@ -74,9 +75,12 @@ def scan(cfg: dict) -> StoreResult:
         res.products_checked.add(h)
         opts = [o.get("name", "").lower() if isinstance(o, dict) else str(o).lower() for o in p.get("options", [])]
         size_idx = next((i for i, n in enumerate(opts) if n in SIZE_OPTION_NAMES), None)
+        if size_idx is None:  # 如 GearX 的 “Footwear Size (Men's)”
+            size_idx = next((i for i, n in enumerate(opts) if any(k in n for k in SIZE_OPTION_NAMES)), None)
         if size_idx is None and len(opts) == 1:
             size_idx = 0
-        gender = cfg.get("gender") or gender_from_title(title)
+        # 尺码选项名里写了男女（如 “(Men's)”）就以它为准
+        gender = cfg.get("gender") or (gender_from_title(opts[size_idx]) if size_idx is not None else None) or gender_from_title(title)
         cond = _condition(cfg, p)
         for v in p.get("variants", []):
             raw = (v.get("options") or [None] * 3)[size_idx] if size_idx is not None else v.get("title", "")
@@ -86,6 +90,9 @@ def scan(cfg: dict) -> StoreResult:
                 status, note = UNKNOWN, "店铺未跟踪库存"
             else:
                 status, note = (IN if v.get("available") else OUT), ""
+            cmp_at, price = v.get("compare_at_price") or 0, v.get("price") or 0
+            if cmp_at > price > 0:
+                note = "；".join(x for x in (note, f"原价 {cmp_at / 100:g}（现价约 {price / cmp_at * 10:.1f} 折）") if x)
             color = " / ".join(
                 o for i, o in enumerate(v.get("options") or []) if i != size_idx and o
             )

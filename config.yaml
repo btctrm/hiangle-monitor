@@ -20,6 +20,8 @@ rules:
   fail_alert_after: 3     # 连续几次抓取失败发“监控失效”
   max_separate_alerts: 5  # 一轮超过几条就合并成一条
   digest_hour_bj: 9       # 每天几点（北京时间）后发日报邮件
+  price_drop_pct: 10      # 同一尺码价格连续两轮确认后比之前低这么多（%），就发“降价”提醒；0 = 关闭
+  price_drop_push: true   # 降价提醒是否推送（false = 只进日报）；只有冷门码降价时只进日报
 
 # 不再监控的商品（看过觉得不要的）：不推送、不进日报。
 # store = 店铺 id；product = 商品标识（Shopify 是链接里 /products/ 后面那段）；可选 variant = 具体尺码
@@ -64,6 +66,7 @@ stores:
     size_system: US_M      # 店铺只写数字，按美码男款推测，待验收
     size_verified: false
     condition: new
+    handles: [adidas-five-ten-hiangle-climbing-shoe]   # 2026-11-04 实测站内搜索搜不到它了，写死商品页
 
   - id: delire
     name: Délire Escalade（加拿大）
@@ -76,6 +79,7 @@ stores:
     size_system: US_M      # 推测，待验收
     size_verified: false
     condition: new
+    handles: [five-ten-hiangle-pro]
     # 注意：页面实际显示清仓价 C$161（-30%），但接口给的是原价 C$230，
     # 折扣是结账/前台插件算的，程序拿不到 → 这家店的到手成本会偏高（只会漏报，不会误报）
 
@@ -114,3 +118,58 @@ stores:
     region: US
     shipping: 15           # 估算
     enabled: true          # 没配 EBAY_APP_ID / EBAY_CERT_ID 时自动跳过
+
+  # 同一套 eBay 密钥，不用另外申请
+  - id: ebay_gb
+    name: eBay 英国
+    type: ebay
+    marketplace: EBAY_GB
+    search: five ten hiangle
+    currency: GBP
+    region: GB
+    shipping: 5            # 估算
+    enabled: true
+
+  - id: ebay_de
+    name: eBay 德国
+    type: ebay
+    marketplace: EBAY_DE
+    search: five ten hiangle
+    currency: EUR
+    region: DE
+    shipping: 7            # 估算
+    enabled: true
+
+  # ———— 试运行店铺（2026-11-04 加）————
+  # 通过网页搜索找到、但还没实际读过的店。trial: true 的意思：
+  #   读不了不发“监控失效”，只在日报“运行情况”里显示失败原因；读到达标的货照常推送，推送里会注明“试运行”。
+  # 验收：Actions → hiangle-monitor → Run workflow，mode 选 check，store 填店铺 id，对照网页核对尺码和库存。
+  # 验收通过后删掉 trial 这一行；一直失败的整段删掉即可。
+  - id: gearx
+    name: GearX / Outdoor Gear Exchange（美国）
+    type: shopify
+    domain: gearx.com
+    home: https://www.gearx.com/search?q=hiangle
+    currency: USD
+    region: US
+    shipping: 10           # 估算
+    size_system: US        # 尺码选项名写 “Footwear Size (Men's)/(Women's)”，按美码男/女换算
+    size_verified: false
+    condition: tags        # 这家新旧都卖；带 Used 标签或标题写 used 的算二手，其余记“成色未知”
+    used_tags: [Used, used, Used Gear]
+    trial: true            # 2026-11-04 实测能读：Hiangle 男款 11 个尺码 2 个有货 $160；女款全缺
+
+  - id: epictv
+    name: EpicTV Shop（英国）
+    type: jsonld
+    urls:
+      - https://epictv.com/five-ten-hiangle-pro
+      - https://epictv.com/five-ten-hiangle-women-s
+    product_ids: [five-ten-hiangle-pro, five-ten-hiangle-women-s]
+    home: https://epictv.com/five-ten-hiangle-pro
+    currency: USD          # 以页面标注为准（GitHub 服务器在美国，2026-11-04 实测页面给的是美元）
+    region: GB
+    shipping: 5            # 估算
+    size_system: EU        # 2026-11-04 实测：尺码写 “38 2/3” 这种欧码，不带 EU 字样
+    size_verified: false
+    trial: true            # 2026-11-04 实测能读：Hiangle Pro 13 个尺码有货 $146.87
