@@ -56,10 +56,12 @@ def _dump(html: str) -> list[str]:
             break
     for m in re.finditer(r"window\.(__[A-Z_]+__|[A-Za-z_]*[Ss]tate)\s*=", html):
         out.append(f"  [内嵌变量] {m.group(0)} 位置 {m.start()}")
-    for n, m in enumerate(re.finditer(r"hiangle", html, re.I)):
+    body = max(html.find("<body"), 0)  # 跳过 <head>，看正文里商品卡片的写法
+    for n, m in enumerate(re.finditer(r"hiangle", html[body:], re.I)):
         if n >= 3:
             break
-        out.append("  [原文] …" + re.sub(r"\s+", " ", html[max(0, m.start() - 300):m.start() + 500]) + "…")
+        i = body + m.start()
+        out.append("  [正文] …" + re.sub(r"\s+", " ", html[max(0, i - 400):i + 700]) + "…")
     return out
 
 

@@ -19,14 +19,14 @@ import yaml
 from . import notify
 from .core import IN, OUT, UNKNOWN, Obs, StoreResult
 from .money import PUSH_TIERS, TIER_LABEL, TIER_RANK, evaluate, rates
-from .parsers import bergfreunde, ebay, jsonld, shopify
+from .parsers import bergfreunde, ebay, japan, jsonld, shopify
 import html as _h
 
 from .sizes import eu_of, fmt_uk, size_line, size_short
 
 ROOT = Path(__file__).resolve().parent.parent
 BJ = timezone(timedelta(hours=8))
-PARSERS = {"shopify": shopify, "bergfreunde": bergfreunde, "jsonld": jsonld, "ebay": ebay}
+PARSERS = {"shopify": shopify, "bergfreunde": bergfreunde, "jsonld": jsonld, "ebay": ebay, "japan": japan}
 COND_LABEL = {"used": "【二手】", "unknown": "【成色未知】", "new": ""}
 CUR = {"USD": "$", "EUR": "€", "GBP": "£", "CAD": "C$", "JPY": "¥", "CNY": "¥"}
 
