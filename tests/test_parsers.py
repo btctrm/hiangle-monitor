@@ -76,3 +76,18 @@ def test_japan_skips_without_key():
     os.environ.pop("RAKUTEN_APP_ID", None)
     r = japan.scan({"id": "rk", "api": "rakuten"})
     assert r.ok and "未配置" in r.error and not r.obs
+
+
+def test_geartrade_condition_from_tags_and_description():
+    from hmon.parsers import shopify
+    cfg = {"condition": "tags", "used_tags": ["ConsignmentItem", "Consignment", "Used"]}
+    used = {"title": "Five Ten Hiangle Pro", "tags": ["Brand:five-ten", "mm-google-shopping-condition-good"],
+            "description": "<p>Product Condition: The Hiangle Pro Climbing Shoe is in Good condition. Owned since 2026-01-17, white paint on the toe tips. Size: Unisex Mens 11.5</p>"}
+    cond, note = shopify._condition_detail(cfg, used)
+    assert cond == "used" and "良好" in note and "white paint" in note and "Size" not in note
+    promo = {"title": "Five Ten Hiangle Women's", "tags": ["70-Off", "RetailVendorPartner", "promo", "Womens"],
+             "description": "The Five Ten Hiangle Climbing Shoe is a high-performance footwear"}
+    cond, note = shopify._condition_detail(cfg, promo)
+    assert cond == "unknown" and "店铺没写成色" in note and "70-Off" in note
+    cond, note = shopify._condition_detail({"condition": "new"}, {"title": "x", "tags": [], "description": ""})
+    assert cond == "new" and note == ""

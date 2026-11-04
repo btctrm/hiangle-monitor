@@ -88,22 +88,22 @@ def alert_text(o: dict, ev: dict, scfg: dict, first_seen: str, note: str) -> tup
         f"{TIER_LABEL.get(tier, '')}{COND_LABEL.get(o['condition'], '')}"
         f"{o['title'][:40]} {size_short(o['uk'], o['raw_size'])} 到手¥{ev['landed']} · {scfg['name']}"
     )
+    cond_text = {"new": "全新", "used": "二手，请看图确认磨损", "unknown": "未知，请看图确认"}[o["condition"]]
     lines = [
         f"### {TIER_LABEL.get(tier, '')}{COND_LABEL.get(o['condition'], '')}{o['title']}",
         f"- **尺码**：{size_text(o, scfg)}",
-        f"- **配色**：{o['color'] or '—'}",
-        f"- **店铺**：{scfg['name']}（{scfg.get('region', '')}）",
+        f"- **到手成本**：约 ¥{ev['landed']}{'' if ev['fx_live'] else '（汇率为兜底值）'}"
+        f" · **预估利润**：约 ¥{ev['profit']}（售价 1050 − 转运 ¥{ev['forwarder']:g} − 国内邮费 10）",
         f"- **标价**：{money(o['price'], o['currency'])}，店铺运费估 {money(ev['shipping'], o['currency'])}",
-        f"- **到手成本**：约 ¥{ev['landed']}{'' if ev['fx_live'] else '（汇率为兜底值）'}",
-        f"- **预估利润**：约 ¥{ev['profit']}（按售价 1050、转运 ¥{ev['forwarder']:g}、国内邮费 10）",
-        f"- **成色**：{ {'new': '全新', 'used': '二手，请人工看成色', 'unknown': '未知，请人工确认'}[o['condition']] }",
-        f"- **检测**：首次 {first_seen}，确认 {ts()}（北京时间）",
+        f"- **成色**：{cond_text}",
     ]
-    if note:
-        lines.append(f"- **验证**：{note}")
     if o.get("note"):
         lines.append(f"- **备注**：{o['note']}")
     lines.append(f"- **链接**：{o['url']}")
+    lines += [
+        f"- **店铺 / 配色**：{scfg['name']}（{scfg.get('region', '')}） / {o['color'] or '—'}",
+        f"- **检测**：首次 {first_seen}，确认 {ts()}（北京时间）" + (f"；{note}" if note else ""),
+    ]
     return title, "\n".join(lines)
 
 
