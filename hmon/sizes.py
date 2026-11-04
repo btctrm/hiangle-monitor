@@ -81,7 +81,7 @@ def to_uk(raw: str, system: str, gender: str | None = None) -> float | None:
             if n is None or g not in ("M", "W"):
                 return None
             return _valid_uk(n - (0.5 if g == "M" else 1.5))
-        m = re.search(r"\b(Men'?s|Mens|Women'?s|Womens)\s*([\d.]+)", s, re.I)
+        m = re.search(r"\b(Men'?s|Mens|Women'?s|Womens)\s*(?:US\s*)?(?:Size\s*)?([\d.]+)", s, re.I)
         if m:  # 如 “Mens 11/Womens 12”：美码男/女
             n = _num(m.group(2))
             g = "W" if m.group(1).lower().startswith("w") else "M"
