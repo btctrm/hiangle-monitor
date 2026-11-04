@@ -40,6 +40,8 @@ def _shopify(domain: str, query: str) -> list[str]:
             f"    - {t} [{h}]：{len(vs)} 个变体，跟踪库存 {tracked}，有货 {avail}，"
             f"价格 {prices}{'，原价 ' + str(cmp_) if cmp_ else ''}，选项 {opts}，尺码样例 {sizes}"
         )
+        desc = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", p.get("description") or ""))[:400]
+        out.append(f"      标签 {p.get('tags')}；类型 {p.get('type')}；描述 {desc}")
     return out
 
 

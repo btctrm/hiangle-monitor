@@ -35,6 +35,33 @@ def _discover(domain: str, query: str) -> list[str]:
     return handles
 
 
+_GRADE = {"new": "全新", "like new": "几乎全新", "excellent": "极好", "good": "良好", "fair": "一般", "poor": "较差"}
+
+
+def _condition_detail(cfg: dict, product: dict) -> tuple[str, str]:
+    """返回 (成色, 说明)。寄卖/二手店（如 Geartrade）把成色写在标签或描述里：
+    标签 mm-google-shopping-condition-good；描述 “Product Condition: ... is in Good condition. ...”。"""
+    cond = _condition(cfg, product)
+    tags = [str(t).lower() for t in product.get("tags", [])]
+    desc = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", product.get("description") or "")).strip()
+    grade = next((t.rsplit("-", 1)[-1] for t in tags if t.startswith("mm-google-shopping-condition-")), "")
+    m = re.search(r"Product Condition:\s*(.{0,200}?)(?:Size:|Color:|Retail Cost:|$)", desc, re.I)
+    m2 = re.search(r"\bin (like new|excellent|good|fair|poor|new) condition", desc, re.I)
+    if m2:
+        grade = m2.group(1).lower()
+    if grade and cfg.get("condition") == "tags":
+        cond = "new" if grade == "new" else "used"
+    parts = []
+    if grade:
+        parts.append(f"店铺标的成色：{_GRADE.get(grade, grade)}（{grade}）")
+    if m:
+        parts.append("店铺描述：" + m.group(1).strip()[:160])
+    if not grade and cfg.get("condition") == "tags":
+        hints = [t for t in product.get("tags", []) if re.search(r"off$|vendor|promo|consign", str(t), re.I)]
+        parts.append("店铺没写成色" + (f"（标签：{'、'.join(map(str, hints[:4]))}）" if hints else "") + "，请看商品图")
+    return cond, "；".join(parts)
+
+
 def _condition(cfg: dict, product: dict) -> str:
     mode = cfg.get("condition", "new")
     if mode in ("new", "used"):
@@ -81,7 +108,7 @@ def scan(cfg: dict) -> StoreResult:
             size_idx = 0
         # 尺码选项名里写了男女（如 “(Men's)”）就以它为准
         gender = cfg.get("gender") or (gender_from_title(opts[size_idx]) if size_idx is not None else None) or gender_from_title(title)
-        cond = _condition(cfg, p)
+        cond, cond_note = _condition_detail(cfg, p)
         for v in p.get("variants", []):
             raw = (v.get("options") or [None] * 3)[size_idx] if size_idx is not None else v.get("title", "")
             raw = raw or ""
@@ -90,6 +117,8 @@ def scan(cfg: dict) -> StoreResult:
                 status, note = UNKNOWN, "店铺未跟踪库存"
             else:
                 status, note = (IN if v.get("available") else OUT), ""
+            if cond_note:
+                note = "；".join(x for x in (note, cond_note) if x)
             cmp_at, price = v.get("compare_at_price") or 0, v.get("price") or 0
             if cmp_at > price > 0:
                 note = "；".join(x for x in (note, f"原价 {cmp_at / 100:g}（现价约 {price / cmp_at * 10:.1f} 折）") if x)

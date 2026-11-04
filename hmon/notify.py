@@ -58,11 +58,43 @@ def _email(title: str, md: str, html: str | None = None) -> str:
     return "邮件 成功"
 
 
+def md_to_html(md: str) -> str:
+    """把推送用的简单 Markdown（### 标题、- **键**：值、---、链接）转成邮件 HTML，手机上也好读。"""
+    import html as _h
+
+    out = ["<div style='font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#222'>"]
+    in_list = False
+    for line in md.splitlines():
+        t = _h.escape(line.strip())
+        t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+        t = re.sub(r"(https?://[^\s<]+)", r"<a href='\1'>\1</a>", t)
+        if t.startswith("- "):
+            if not in_list:
+                out.append("<ul style='padding-left:18px;margin:6px 0'>")
+                in_list = True
+            out.append(f"<li style='margin:3px 0'>{t[2:]}</li>")
+            continue
+        if in_list:
+            out.append("</ul>")
+            in_list = False
+        if t.startswith("### "):
+            out.append(f"<h3 style='margin:14px 0 6px;font-size:17px'>{t[4:]}</h3>")
+        elif t == "---":
+            out.append("<hr style='border:none;border-top:1px solid #ddd;margin:14px 0'>")
+        elif t:
+            out.append(f"<p style='margin:6px 0'>{t}</p>")
+    if in_list:
+        out.append("</ul>")
+    out.append("</div>")
+    return "".join(out)
+
+
 def send(title: str, md: str, *, wechat: bool = True, email: bool = True, dry: bool = False, html: str | None = None) -> list[str]:
     if dry:
         print("\n======== [演练，不发送] " + title + "\n" + md + "\n========")
         return ["演练"]
     out = []
+    html = html or md_to_html(md)  # 邮件一律发 HTML，不再露出 ### 和 ** 符号
     chans = ([_pushplus, _serverchan] if wechat else []) + ([_email] if email else [])
     for fn in chans:
         try:
