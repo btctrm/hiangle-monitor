@@ -1,0 +1,74 @@
+# eu_retail_b：欧洲零售第二批（Sportano / Intersport DE / XXL NO / SportsShoes / Mountex）
+stores:
+  - id: sportano_pl
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Sportano（波兰）
+    type: sportano
+    base: https://sportano.pl
+    home: https://sportano.pl/catalogsearch/result/?q=hiangle
+    search: hiangle
+    urls:
+      - https://sportano.pl/p/798312/buty-wspinaczkowe-damskie-adidas-five-ten-hiangle-cloud-white-core-black-signal-coral
+    currency: PLN
+    region: PL
+    shipping: 0            # JSON-LD shippingRate 0 PLN（波兰境内）
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true    # 页面标 "38 2/3 EU"，按 Five Ten 欧码表换算
+
+  - id: intersport_de
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Intersport（德国）
+    type: intersport_de
+    home: https://www.intersport.de/p/adidas-herren-five-ten-hiangle-kletterschuh-p1026351
+    urls:
+      - https://www.intersport.de/p/adidas-herren-five-ten-hiangle-kletterschuh-p1026351
+    currency: EUR
+    region: DE
+    shipping: 0            # 估算：德国境内（未核实满额免邮门槛）
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true    # 尺码为欧码 "42 ⅔"
+
+  - id: xxl_no
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: XXL（挪威）
+    type: xxl
+    base: https://www.xxl.no
+    home: https://www.xxl.no/adidas-five-ten-hiangle-klatresko-hvit/p/1248237_1_Style
+    styles: [1248237_1_Style, 1248238_1_Style]   # 页面里同系列新款式会自动加入
+    currency: NOK
+    region: NO
+    shipping: 0            # 估算
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true    # 标签 "8,5/42 2/3" = UK/EU，两者一致才采信
+
+  - id: sportsshoes_uk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: SportsShoes.com（英国）
+    type: sportsshoes
+    home: https://www.sportsshoes.com/product/fiv131/five-ten-hiangle-climbing-shoes
+    urls:
+      - https://www.sportsshoes.com/product/fiv131/five-ten-hiangle-climbing-shoes
+      - https://www.sportsshoes.com/product/fiv78/five-ten-hiangle-climbing-shoes---aw21
+    currency: GBP
+    region: GB
+    shipping: 0            # 估算
+    every_minutes: 60      # 清仓页，目前全缺货，按小时查
+    confirm_runs: 2
+    size_verified: true    # 英码；EAN 4061625307901 = UK 7 已与 XXL 核对
+
+  - id: mountex_hu
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Mountex（匈牙利）
+    type: mountex
+    home: https://mountex.hu/termek/10234390/fiveten_hiangle_maszocipo
+    urls:
+      - https://mountex.hu/termek/10234390/fiveten_hiangle_maszocipo
+    currency: HUF
+    region: HU
+    shipping: 0            # 估算
+    every_minutes: 60      # 目前全缺货，低频
+    confirm_runs: 2
+    size_verified: true    # 名称末尾英码与欧码字段双重核对

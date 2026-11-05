@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import os
 import sys
@@ -27,8 +28,8 @@ from .sizes import eu_of, fmt_uk, size_line, size_short
 ROOT = Path(__file__).resolve().parent.parent
 BJ = timezone(timedelta(hours=8))
 PARSERS = {"shopify": shopify, "bergfreunde": bergfreunde, "jsonld": jsonld, "ebay": ebay, "japan": japan, "poshmark": poshmark}
-COND_LABEL = {"used": "【二手】", "unknown": "【成色未知】", "new": ""}
-CUR = {"USD": "$", "EUR": "€", "GBP": "£", "CAD": "C$", "JPY": "¥", "CNY": "¥"}
+COND_LABEL = {"used": "【二手】", "unknown": "【成色未知】", "new": "", "like_new": "【近新】"}
+CUR = {"USD": "$", "EUR": "€", "GBP": "£", "CAD": "C$", "JPY": "JP¥", "CNY": "¥"}
 
 
 def now_bj() -> datetime:
@@ -40,7 +41,25 @@ def ts(dt: datetime | None = None) -> str:
 
 
 def load_cfg() -> dict:
-    return yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+    """config.yaml + config.d/*.yaml（后者只合并 stores 和 ignore）。"""
+    cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+    cfg.setdefault("stores", [])
+    for p in sorted((ROOT / "config.d").glob("*.yaml")):
+        extra = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        cfg["stores"] += extra.get("stores") or []
+        cfg.setdefault("ignore", [])
+        cfg["ignore"] = (cfg["ignore"] or []) + (extra.get("ignore") or [])
+    ids = [s["id"] for s in cfg["stores"]]
+    dup = sorted({i for i in ids if ids.count(i) > 1})
+    if dup:
+        raise SystemExit(f"店铺 id 重复：{dup}")
+    return cfg
+
+
+def parser_for(kind: str):
+    if kind in PARSERS:
+        return PARSERS[kind]
+    return importlib.import_module(f".parsers.{kind}", __package__)
 
 
 def load_state(path: Path) -> dict:
@@ -88,12 +107,13 @@ def alert_text(o: dict, ev: dict, scfg: dict, first_seen: str, note: str) -> tup
         f"{TIER_LABEL.get(tier, '')}{COND_LABEL.get(o['condition'], '')}"
         f"{o['title'][:40]} {size_short(o['uk'], o['raw_size'])} 到手¥{ev['landed']} · {scfg['name']}"
     )
-    cond_text = {"new": "全新", "used": "二手，请看图确认磨损", "unknown": "未知，请看图确认"}[o["condition"]]
+    cond_text = {"new": "全新", "like_new": "近新（平台或卖家标注），请看图确认", "used": "二手，请看图确认磨损",
+                 "unknown": "未知，请看图确认"}.get(o["condition"], o["condition"])
     lines = [
         f"### {TIER_LABEL.get(tier, '')}{COND_LABEL.get(o['condition'], '')}{o['title']}",
         f"- **尺码**：{size_text(o, scfg)}",
         f"- **到手成本**：约 ¥{ev['landed']}{'' if ev['fx_live'] else '（汇率为兜底值）'}"
-        f" · **预估利润**：约 ¥{ev['profit']}（售价 1050 − 转运 ¥{ev['forwarder']:g} − 国内邮费 10）",
+        f" · **预估利润**：约 ¥{ev['profit']}（售价 {ev.get('sale', 1050):g}{'，按二手价' if ev.get('sale', 1050) != 1050 else ''} − 转运 ¥{ev['forwarder']:g} − 国内邮费 10）",
         f"- **标价**：{money(o['price'], o['currency'])}，店铺运费估 {money(ev['shipping'], o['currency'])}",
         f"- **成色**：{cond_text}",
     ]
@@ -220,7 +240,7 @@ def scan_store(scfg: dict, st: dict) -> StoreResult:
 
     core.LIMITS.update(timeout=15, retries=0) if scfg.get("trial") else core.LIMITS.update(timeout=25, retries=2)
     try:
-        return PARSERS[scfg["type"]].scan(cfg2)
+        return parser_for(scfg["type"]).scan(cfg2)
     except Exception as e:  # 解析器自身出错：整店未知
         return StoreResult(store=scfg["id"], ok=False, error=f"解析器异常：{e.__class__.__name__}: {e}")
     finally:
@@ -245,6 +265,13 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
             continue
         sid = scfg["id"]
         ss = st["stores"].setdefault(sid, {"fail": 0, "alerted": False, "baseline": False})
+        every = int(scfg.get("every_minutes", 0))  # 比价站 / 二手平台不用每轮都查，免得被封
+        if every and ss.get("last_scan") and not only:
+            last = datetime.strptime(ss["last_scan"], "%Y-%m-%d %H:%M").replace(tzinfo=BJ)
+            if now_bj() - last < timedelta(minutes=every - 2):
+                run_log["stores"][sid] = f"跳过（每 {every} 分钟查一次）"
+                continue
+        ss["last_scan"] = now
         res = scan_store(scfg, st)
         mine = {k: v for k, v in st["variants"].items() if v["store"] == sid}
 
@@ -329,8 +356,12 @@ def run(dry: bool = False, only: str | None = None, state_path: Path | None = No
             tier = ev["tier"]
             if tier not in PUSH_TIERS or TIER_RANK[tier] <= TIER_RANK.get(v.get("notified_tier"), 0):
                 continue
-            if v["streak"] < confirm_runs:
-                continue  # 等下一轮复查
+            if v["streak"] < int(scfg.get("confirm_runs", confirm_runs)):
+                continue  # 等下一轮复查（二手/比价站一条 listing 出现即算，confirm_runs: 1）
+            if o.condition not in cfg["rules"].get("push_conditions", ["new", "like_new", "used", "unknown"]):
+                continue  # 有使用痕迹的二手不推（只进日报）
+            if tier == "unknown_size" and not scfg.get("push_unknown_size", scfg.get("segment") != "aggregator"):
+                continue  # 比价站“码制不明”的条目太多：只进日报
             notes = []
             if ss.get("anomaly"):
                 notes.append("该店刚出现过大面积同时上新，请重点核实")
@@ -411,7 +442,7 @@ def _cost_row(v: dict) -> dict:
         "price": money(v.get("price"), v.get("currency", "")),
         "landed": v.get("landed"),
         "profit": v.get("profit"),
-        "cond": {"new": "全新", "used": "二手", "unknown": "成色未知"}.get(v.get("condition"), "?"),
+        "cond": {"new": "全新", "like_new": "近新", "used": "二手", "unknown": "成色未知"}.get(v.get("condition"), "?"),
         "tier": TIER_LABEL.get(v.get("tier"), "") or ("达标" if v.get("tier") in PUSH_TIERS else ""),
         "title": v.get("title", ""),
         "color": v.get("color", ""),
@@ -473,22 +504,27 @@ def digest_text(cfg: dict, st: dict) -> tuple[str, str, str]:
     by_store: dict = {}
     for v in rows:
         by_store.setdefault(v["store"], []).append(v)
-    for sid, vs in by_store.items():
-        t += ["", f"【{sname(sid)}】{len(vs)} 个有货"]
-        for v in sorted(vs, key=lambda x: (x["title"], x["uk"] if x["uk"] is not None else 99)):
-            r = _cost_row(v)
-            t.append(f"- EU {r['eu']} / UK {r['uk']} / US男 {r['usm']}（原文 {r['raw']}） {r['price']} → 到手¥{r['landed']} 利润≈¥{r['profit']} {r['cond']} · {r['title'][:30]} {r['color'][:20]}")
+    # 来源多了以后不再逐码列全部有货尺码（邮件会超过 Gmail 102KB 被截断），改成每个来源一行概况
     t += ["", "【运行情况】", f"- 今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}"]
     if nerr:
         t.append(f"- 最近一次通知渠道出错：{nerr['time']} {'；'.join(nerr['errors'])}")
-    for sid, ss in st["stores"].items():
-        state = f"失败 {ss['fail']} 次：{ss.get('last_error', '')}" if ss.get("fail", 0) else st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
-        t.append(f"- {sname(sid)}：{state}")
+    active = [sid for sid in st["stores"] if sid in stores and stores[sid].get("enabled", True)]
+    active.sort(key=lambda x: (-(st["stores"][x].get("fail", 0) > 0), stores[x].get("segment", "retail"), x))
+
+    def store_state(sid):
+        ss = st["stores"][sid]
+        if ss.get("fail", 0):
+            return True, f"失败 {ss['fail']} 次：{ss.get('last_error', '')[:80]}"
+        return False, st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
+    for sid in active:
+        vs = by_store.get(sid, [])
+        low = min((v["landed"] for v in vs), default=None)
+        t.append(f"- {sname(sid)}：{store_state(sid)[1]}；有货 {len(vs)} 个" + (f"，最低到手¥{low}" if low else ""))
 
     # ---------- HTML ----------
-    css_td = "padding:4px 8px;border-bottom:1px solid #ddd;font-size:13px;white-space:nowrap"
-    css_th = css_td + ";background:#f3f3f3;text-align:left"
-    head = "".join(f"<th style='{css_th}'>{x}</th>" for x in ["欧码", "UK", "US男", "店铺原文", "标价", "到手成本", "预估利润", "成色", "款式 / 配色", "链接"])
+    css_td = ""  # 样式统一放进 <style>，否则每个格子重复一遍，邮件会超过 Gmail 102KB 被截断
+    css_th = ""
+    head = "".join(f"<th>{x}</th>" for x in ["欧码", "UK", "US男", "店铺原文", "标价", "到手成本", "预估利润", "成色", "款式 / 配色", "链接"])
 
     def tr(v, hl=False):
         r = _cost_row(v)
@@ -497,15 +533,18 @@ def digest_text(cfg: dict, st: dict) -> tuple[str, str, str]:
                  f"¥{r['landed']}", f"¥{r['profit']}", r["cond"],
                  _h.escape(f"{r['tier']} {r['title'][:38]} · {r['color'][:24]}"),
                  f"<a href='{_h.escape(r['url'])}'>打开</a>"]
-        return "<tr>" + "".join(f"<td style='{bg}{css_td}'>{c}</td>" for c in cells) + "</tr>"
+        attr = f" style='{bg}'" if bg else ""
+        return "<tr>" + "".join(f"<td{attr}>{c}</td>" for c in cells) + "</tr>"
 
-    hp = [f"<div style='font-family:-apple-system,Helvetica,Arial,sans-serif;color:#222'>",
+    hp = ["<style>table{border-collapse:collapse}td,th{padding:4px 8px;border-bottom:1px solid #ddd;font-size:13px;"
+          "white-space:nowrap;text-align:left}th{background:#f3f3f3}</style>",
+          f"<div style='font-family:-apple-system,Helvetica,Arial,sans-serif;color:#222'>",
           f"<h2 style='margin:0 0 4px'>Hiangle 日报</h2><div style='color:#666;font-size:13px'>{now}（北京时间） · 当前有货 {len(rows)} 个尺码，达标 {len(good)} 个{'' if live else ' · 汇率为兜底值'}</div>",
           "<h3>达到门槛</h3>"]
     if good:
-        hp.append(f"<table style='border-collapse:collapse'><tr>{head}<th style='{css_th}'>店铺</th></tr>")
+        hp.append(f"<table><tr>{head}<th>店铺</th></tr>")
         for v in good:
-            hp.append(tr(v, True).replace("</tr>", f"<td style='{css_td}'>{_h.escape(stores.get(v['store'], {}).get('name', v['store']))}</td></tr>"))
+            hp.append(tr(v, True).replace("</tr>", f"<td>{_h.escape(stores.get(v['store'], {}).get('name', v['store']))}</td></tr>"))
         hp.append("</table>")
     else:
         hp.append("<p>暂无</p>")
@@ -520,20 +559,20 @@ def digest_text(cfg: dict, st: dict) -> tuple[str, str, str]:
         hp.append(f"<li>{e['time']} {_h.escape(sname(e['store']))} {_h.escape(e['title'][:36])}：{_h.escape(money(e['old'], e['currency']))} → "
                   f"<b>{_h.escape(money(e['new'], e['currency']))}</b>（-{e['pct']}%），{e['n']} 个尺码，最低到手 ¥{e['landed']} · <a href='{_h.escape(e.get('url', ''))}'>打开</a></li>")
     hp.append("</ul>" if recent_drops else "<li>暂无</li></ul>")
-    hp.append("<h3>各店全部有货尺码</h3>")
-    for sid, vs in by_store.items():
-        hp.append(f"<h4 style='margin:14px 0 4px'>{_h.escape(sname(sid))} · {len(vs)} 个有货</h4><table style='border-collapse:collapse'><tr>{head}</tr>")
-        for v in sorted(vs, key=lambda x: (x["title"], x["uk"] if x["uk"] is not None else 99)):
-            hp.append(tr(v, v.get("tier") in PUSH_TIERS))
-        hp.append("</table>")
-    hp.append("<h3>运行情况</h3><ul style='font-size:13px'>")
-    hp.append(f"<li>今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}</li>")
+    seg_cn = {"retail": "新品店", "aggregator": "比价站", "used": "二手", "deals": "折扣站"}
+    hp.append(f"<h3>各来源概况</h3><div style='font-size:13px;color:#666'>今天已运行 {st['meta'].get('runs_today', 0)} 次，最近一次 {st['meta'].get('last_run', '-')}</div>")
     if nerr:
-        hp.append(f"<li style='color:#b00'>最近一次通知渠道出错：{nerr['time']} {_h.escape('；'.join(nerr['errors']))}</li>")
-    for sid, ss in st["stores"].items():
-        state = f"失败 {ss['fail']} 次：{ss.get('last_error', '')}" if ss.get("fail", 0) else st["meta"].get("last_log", {}).get("stores", {}).get(sid, "正常")
-        hp.append(f"<li>{_h.escape(sname(sid))}：{_h.escape(state)}</li>")
-    hp.append("</ul><p style='color:#888;font-size:12px'>到手成本 = (标价 + 店铺运费估算) × 汇率 × 1.015；预估利润 = 1050 − 国内邮费 − 转运费 − 到手成本。黄色行 = 达到推送门槛。</p></div>")
+        hp.append(f"<div style='font-size:13px;color:#b00'>最近一次通知渠道出错：{nerr['time']} {_h.escape('；'.join(nerr['errors']))}</div>")
+    hp.append("<table><tr>" + "".join(f"<th>{x}</th>" for x in ["来源", "类型", "本轮", "有货尺码", "最低到手"]) + "</tr>")
+    for sid in active:
+        vs = by_store.get(sid, [])
+        low = min((v["landed"] for v in vs), default=None)
+        bad, state = store_state(sid)
+        red = " style='color:#c00'" if bad else ""
+        cells = [sname(sid), seg_cn.get(stores[sid].get("segment", "retail"), ""), state, str(len(vs)), f"¥{low}" if low else "-"]
+        hp.append("<tr>" + "".join(f"<td{red}>{_h.escape(c)}</td>" for c in cells) + "</tr>")
+    hp.append("</table>")
+    hp.append("<p style='color:#888;font-size:12px'>到手成本 = (标价 + 店铺运费估算) × 汇率 × 1.015；预估利润 = 售价（全新 1050 / 二手 800）− 国内邮费 − 转运费 − 到手成本；利润低于 ¥150 不推送。黄色行 = 达到推送门槛。</p></div>")
     return title, "\n".join(t), "".join(hp)
 
 
@@ -557,7 +596,7 @@ def check(store_id: str) -> int:
     """验收用：打印某家店本轮解析出的每个尺码，拿去和浏览器人工核对。"""
     cfg = load_cfg()
     scfg = next(s for s in cfg["stores"] if s["id"] == store_id)
-    res = PARSERS[scfg["type"]].scan(dict(scfg, _known_products=[]))
+    res = parser_for(scfg["type"]).scan(dict(scfg, _known_products=[]))
     print(f"{scfg['name']}  ok={res.ok}  {res.error}")
     for o in sorted(res.obs, key=lambda o: (o.title, o.color, o.uk or 0)):
         ev = evaluate(o, scfg, cfg) if o.status == IN else {}

@@ -54,7 +54,7 @@ def eu_to_uk(eu: str) -> float | None:
 
 def _num(s: str) -> float | None:
     s = _norm(s)
-    if re.fullmatch(r"\d{1,2}(\.5)?", s):
+    if re.fullmatch(r"\d{1,2}(\.[05])?", s):
         return float(s)
     return None
 
@@ -78,9 +78,13 @@ def to_uk(raw: str, system: str, gender: str | None = None) -> float | None:
         if m:
             g = (m.group(1) or gender or "").upper()[:1]
             n = _num(m.group(2))
-            if n is None or g not in ("M", "W"):
-                return None
-            return _valid_uk(n - (0.5 if g == "M" else 1.5))
+            if n is not None and g in ("M", "W"):
+                return _valid_uk(n - (0.5 if g == "M" else 1.5))
+            # 男女不明：继续看有没有 cm/mm 可用，没有就返回 None
+        m = re.search(r"(\d{2}(?:\.[05])?)\s*cm\b", s, re.I) or re.search(r"\b(2\d{2})\s*mm\b", s, re.I)
+        if m:  # 日本 cm / 韩国 mm：按 Goofee 对照（US男 = cm − 18），UK = cm − 18.5【未对照 adidas 日本官方表】
+            cm = float(m.group(1)) / (10 if "mm" in m.group(0).lower() else 1)
+            return _valid_uk(cm - 18.5)
         m = re.search(r"\b(Men'?s|Mens|Women'?s|Womens)\s*(?:US\s*)?(?:Size\s*)?([\d.]+)", s, re.I)
         if m:  # 如 “Mens 11/Womens 12”：美码男/女
             n = _num(m.group(2))

@@ -19,13 +19,22 @@
 - [x] 16. 第二批合并到 main（btctrm/hiangle-monitor#2）
 - [x] 17. 推送邮件改 HTML、寄卖店读取成色、码制不明附推测码数（btctrm/hiangle-monitor#3）
 - [x] 18. 写交接报告 HANDOFF.md
-- [ ] 19. **等用户回答**：最低利润线 min_profit 定多少、二手售价 used_sale_price 按多少算 → 再改 money.evaluate()
+- [x] 19. 用户定了：最低利润线 ¥150、二手售价 ¥800 → 已改 money.evaluate()（2026-11-05）
 - [ ] 20. 邮件是唯一渠道：全部渠道失败时让 Actions 标红，借 GitHub 自己的通知兜底
-- [ ] 21. 确认外部定时触发（workflow_dispatch 每 15 分钟）用的 token 有效期
+- [x] 21. 外部定时触发是 cron-job.org，每 15 分钟调一次 workflow_dispatch；token 是 fine-grained，用户 10-08 建的时候选了“不过期”（10-08 的会话记录里有）
+
+- [x] 22. 合并 10-09 扩展版：新增 54 个来源（新品店 16、比价站 10、二手 22、eBay 6 站），全部 trial（2026-11-05）
+- [x] 23. 新规则：有使用痕迹的二手只进日报（push_conditions），比价站码制不明只进日报，低频来源 every_minutes
+- [x] 24. 日报改成每个来源一行概况（几百个有货尺码会超过 Gmail 102KB 被截断）
+- [x] 25. Yahoo!オークション 改版成 Next.js，解析器已改读 __NEXT_DATA__，并读取平台成色（USED10=近新）
+- [x] 26. 测试 33 个全部通过（3.11）；沙箱里用线上 state 演练两轮，没有误推，第二轮会推 2 条（Willhaben €66 全新 UK6、Jimoty ¥15,000 全新 23.5cm）
+- [ ] 27. 用户把新 zip 拖到 GitHub 上传页部署；部署后看第一轮哪些来源在 GitHub 上读不了
+- [ ] 28. 沙箱里读不了、要在 GitHub 上确认：PriceRunner 英/瑞/丹、beslist、Backcountry（HTTP 202 挑战页）、BigGo（找不到数据）、EpicTV（沙箱 403，GitHub 上之前能读）
+- [ ] 29. 第 20 项要改 workflow，上传 zip 改不了 .github；需要用户把仓库授权给本会话（或手动改）
 
 ## 新发现的事项
 - [ ] 日本转运费没有报价，暂按 ¥150；有实际报价请改 config.yaml 的 forwarder
-- [ ] Kleinanzeigen（德国二手）能打开但价格不在结构化数据里，需要单独写解析器
+- [x] Kleinanzeigen（德国二手）：10-09 版已有专门解析器，这次一并接入
 - [ ] Vinted 数据在浏览器端加载，免费方案读不了
 - [x] SpokeX 站内搜索已搜不到 Hiangle（之前靠记住的商品页在读），已写死商品页
 - [ ] SpokeX / Délire / Geartrade 尺码换算仍是推测，待人工验收
@@ -37,4 +46,6 @@
 - [x] 门槛（¥750 / ¥850）：用户决定保持不变，宁高勿低；改为另加最低利润线（第 19 项）
 - [x] 读不了的店（已删）：Snowleader、Bike24、Sierra、Mercari（403）；Varuste、Barrabes、Absolute-Snow、Hardloop、Klimschoenen（无逐码数据）；Sportfits、Neptune（404）；澳洲几家、Altitude Sports、Last Hunt（非 Shopify）。SportsShoes 后来用“整款单价”模式重新接入了
 - [ ] Poshmark 6 条二手即将合并推送；利润按 ¥1050 算偏高（见第 19 项）
-- [ ] 比价聚合站 idealo.de / geizhals / PriceRunner 未探测
+- [x] 比价聚合站：PriceRunner、billiger、beslist 等 10 个已接入；idealo 被拦（10-09 调研）
+- [ ] 日本 cm→UK 换算按 UK = cm − 18.5（来自 Goofee 尺码表），没拿 adidas 日本官方表核对
+- [ ] Addnature“页面列出的尺码 = 有货”是推断；Hardloop 供应商调货算有货（备注写到货日期）

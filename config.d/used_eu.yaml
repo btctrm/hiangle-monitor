@@ -1,0 +1,189 @@
+# 欧洲二手组：Kleinanzeigen / willhaben / Finn·Tori·DBA·Blocket / Bazoš / Marktplaats·2dehands / Gumtree UK / Allegro Lokalnie
+# 二手单件：每条在售 listing = 有货；本轮搜索里消失 = 下架。尺码来自卖家自由文本（只认显式 UK/EU/US、
+# “Gr./maat/str/veľkosť + EU 码”或标题里孤立的 EU 两位数；范围/半码不猜），所以 size_verified: false。
+#
+# 已放弃：Vinted（vinted.de/.fr/.it/.es/.nl/.pl 全部返回 403 Cloudflare "Please wait / Enable JavaScript"
+#         挑战页，cf_chl；按规则不绕过，未配置）。
+stores:
+  - id: kleinanzeigen_de
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Kleinanzeigen（德国二手）
+    type: kleinanzeigen
+    segment: used
+    currency: EUR
+    region: DE
+    shipping: 6              # 估算：私人卖家 DHL/Hermes 包裹寄德国转运仓
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle]      # 1 次请求
+
+  - id: willhaben_at
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: willhaben（奥地利二手）
+    type: willhaben
+    segment: used
+    currency: EUR
+    region: AT
+    shipping: 8              # 估算：奥地利寄德国转运仓
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle]
+    rows: 90
+
+  - id: finn_no
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: FINN.no（挪威二手）
+    type: recommerce_nordic
+    segment: used
+    domain: www.finn.no
+    currency: NOK
+    region: NO
+    shipping: 150            # 估算：Fiks ferdig / 邮寄，NOK
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    search: hiangle
+    max_details: 4           # 搜索 1 次 + 详情页 ≤4 次（取平台“Tilstand”成色）
+
+  - id: tori_fi
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Tori.fi（芬兰二手）
+    type: recommerce_nordic
+    segment: used
+    domain: www.tori.fi
+    currency: EUR
+    region: FI
+    shipping: 10             # 估算
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    search: hiangle
+    max_details: 4
+
+  - id: dba_dk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: DBA.dk（丹麦二手）
+    type: recommerce_nordic
+    segment: used
+    domain: www.dba.dk
+    currency: DKK
+    region: DK
+    shipping: 80             # 估算，DKK
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    search: hiangle
+    max_details: 4
+
+  - id: blocket_se
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Blocket（瑞典二手）
+    type: recommerce_nordic
+    segment: used
+    domain: www.blocket.se
+    currency: SEK
+    region: SE
+    shipping: 120            # 估算，SEK
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    search: hiangle
+    max_details: 4
+
+  - id: bazos_cz
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Bazoš.cz（捷克二手）
+    type: bazos
+    segment: used
+    domain: www.bazos.cz
+    currency: CZK
+    region: CZ
+    shipping: 200            # 估算，CZK
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle]      # RSS，1 次请求（同时搜正文）
+
+  - id: bazos_sk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Bazoš.sk（斯洛伐克二手）
+    type: bazos
+    segment: used
+    domain: www.bazos.sk
+    currency: EUR
+    region: SK
+    shipping: 10             # 估算
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle]
+
+  - id: bazos_pl
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Bazoš.pl（波兰二手）
+    type: bazos
+    segment: used
+    domain: www.bazos.pl
+    currency: PLN
+    region: PL
+    shipping: 40             # 估算，PLN
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle]
+
+  - id: marktplaats_nl
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Marktplaats（荷兰二手）
+    type: marktplaats
+    segment: used
+    domain: www.marktplaats.nl
+    currency: EUR
+    region: NL
+    shipping: 8              # 估算
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, hi angle, five ten klimschoenen]   # 公开 JSON 接口，3 次请求
+
+  - id: tweedehands_be
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: 2dehands（比利时二手）
+    type: marktplaats
+    segment: used
+    domain: www.2dehands.be
+    currency: EUR
+    region: BE
+    shipping: 8              # 估算
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, hi angle, five ten klimschoenen]
+
+  - id: gumtree_uk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Gumtree（英国二手）
+    type: gumtree_uk
+    segment: used
+    currency: GBP
+    region: GB
+    shipping: 5              # 估算，GBP
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, five ten climbing shoes]   # 2 次请求
+
+  - id: allegro_lokalnie_pl
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Allegro Lokalnie（波兰二手）
+    type: allegro_lokalnie
+    segment: used
+    currency: PLN
+    region: PL
+    shipping: 20             # 估算，PLN
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, five ten wspinaczkowe]     # 2 次请求

@@ -1,0 +1,144 @@
+# 比价站组：PriceRunner UK/SE/DK 等
+stores:
+  - id: pricerunner_uk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: PriceRunner（英国）
+    type: pricerunner
+    segment: aggregator
+    domain: www.pricerunner.com   # pricerunner.co.uk 现在 301 到 .com（英国站，GBP）
+    currency: GBP
+    region: GB
+    shipping: 0                   # 比价站：各商户运费不同，未计
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: true           # 只认 offer 名称末尾的 EU 码，其余标码制不明
+    search: hiangle
+    max_products: 5               # 搜索 1 次 + 商品页 ≤5 次
+
+  - id: pricerunner_se
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: PriceRunner（瑞典）
+    type: pricerunner
+    segment: aggregator
+    domain: www.pricerunner.se
+    currency: SEK
+    region: SE
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: true
+    search: hiangle
+    max_products: 5
+
+  - id: pricerunner_dk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: PriceRunner（丹麦）
+    type: pricerunner
+    segment: aggregator
+    domain: www.pricerunner.dk
+    currency: DKK
+    region: DK
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: true
+    search: hiangle
+    max_products: 5
+
+  - id: billiger_de
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: billiger.de（德国比价）
+    type: billiger
+    segment: aggregator
+    currency: EUR
+    region: DE
+    shipping: 0                   # 各店不同，未计
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: true           # 只认标题末尾 EU 码 / "EU 38"；"Gr 5,5" 等标码制不明
+    search: five ten hiangle
+    max_pages: 3                  # 每页 48 条，目前 66 条 = 2 次请求
+
+  - id: beslist_nl
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: beslist.nl（荷兰比价）
+    type: beslist
+    segment: aggregator
+    currency: EUR
+    region: NL
+    shipping: 0                   # 各店不同，未计
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false          # beslist 不分尺码，全部码制不明（只看各店价格/有货）
+    search: hiangle
+    max_products: 4               # 搜索 1 + 商品页 4 = 5 次请求
+
+  - id: achatmoinscher_fr
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Achatmoinscher（法国比价）
+    type: achatmoinscher
+    segment: aggregator
+    currency: EUR
+    region: FR
+    shipping: 0                   # 各店不同，未计
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: true           # 只认 "EU 45 1/3" / 末尾 " - 46"；"taille 10,5" 标码制不明
+    search: hiangle               # 1 次请求（不要加 &fam=，会 302 到分类页）
+
+  - id: lyst_uk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Lyst（英国聚合）
+    type: lyst
+    segment: aggregator
+    domain: www.lyst.co.uk        # 美国站搜 hiangle 为 0
+    currency: GBP
+    region: GB
+    shipping: 0                   # adidas UK 包邮
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: true           # adidas-uk 的尺码就是 adidas.co.uk 的 UK 码；其他零售商只认带码制写法
+    uk_retailers: [adidas-uk]
+    search: hiangle
+    max_products: 4               # 搜索 1 + 商品页 ≤4
+
+  - id: biggo_us
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: BigGo（美国，含 Amazon/eBay/adidas US）
+    type: biggo
+    segment: aggregator
+    currency: USD
+    region: US
+    shipping: 0                   # 各卖家不同，未计
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false          # 尺码来自标题（多为美码），男女不明时标码制不明
+    search: hiangle               # 1 次请求
+    unknown_as_used: true         # BigGo 上的 eBay 条目多半是二手：成色不明时按二手售价 800 算利润
+
+  - id: kakaku_jp
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: 価格.com（日本比价）
+    type: kakaku
+    segment: aggregator
+    currency: JPY
+    region: JP
+    shipping: 0                   # 各店不同，未计
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false          # 尺码来自商品名（cm 码 / US 码），不明时标码制不明
+    search: hiangle
+    max_pages: 3                  # 每页 40 条，目前 55 条 = 2 次请求
+
+  - id: enuri_kr
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: 에누리 Enuri（韩国比价）
+    type: enuri
+    segment: aggregator
+    currency: KRW
+    region: KR
+    shipping: 0                   # 各店不同（多为海外代购，价格通常已含运费）
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false          # 列表不分尺码，全部码制不明
+    search: 파이브텐 하이앵글      # 必须韩文；1 次请求

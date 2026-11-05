@@ -27,9 +27,9 @@
 | 普通 | UK 4–9 | ≤ ¥850 | 微信 + 邮件 |
 | 【冷门码】 | UK 4 以下 / 9 以上 | ≤ ¥650 | 微信 + 邮件 |
 | 【码制不明】 | 店铺尺码写法认不出 | ≤ ¥850 | 微信 + 邮件，请你自己看码 |
-| 只记录 | 其他 | — | 只进日报 |
+| 只记录 | 其他，或预估利润 < ¥150 | — | 只进日报 |
 
-二手货标题加【二手】，成色未知的加【成色未知】。预估利润 = 1050 − 国内邮费 10 − 转运费（美国 100，其他国家暂按 150）− 到手成本。
+二手货标题加【二手】，近新的加【近新】，成色未知的加【成色未知】。预估利润 = 售价（全新 1050，二手和近新 800）− 国内邮费 10 − 转运费（美国 100，其他国家暂按 150）− 到手成本。
 
 尺码统一换成 UK 码（Five Ten 男女款 UK 码通用）：US 男 = UK + 0.5，US 女 = UK + 1.5，EU 按官方表（42 = UK 8，43⅓ = UK 9）。认不出的写法（比如卖家自填“41.5”）不猜，标“码制不明”，推送里附店铺原文。
 
@@ -84,6 +84,25 @@
 - **降价提醒**：同一尺码价格连续两轮确认后比之前低 10% 以上，就推一条“降价”（还没到门槛也推，方便黑五/清仓时判断）。`price_drop_pct` 改幅度，`price_drop_push: false` 改成只进日报。
 - **日报新增**：“离门槛最近”前 5 名（差多少钱）、“近 7 天明显降价”。
 - Shopify 店有划线原价的，推送备注里写原价和折扣。
+
+### 2026-11-05 合并 10-09 扩展版（新增 54 个来源，含 eBay 6 站，全部试运行；启用的来源合计 67 个）
+
+10-09 做好的扩展版当时没上传，这次和 11-04 的版本合并。重复的来源（Bergzeit、GearX、Poshmark）保留 11-04 的写法，因为线上已经有它们的状态记录；eBay 换成新写的解析器，覆盖 6 个站点。
+
+**新品店（每 15 分钟）**：16 个——Outnorth（瑞典）、Hardloop（法国）、Glisshop（法国）、Addnature（瑞典，奥特莱斯）、Sportano（波兰）、Intersport（德国）、XXL（挪威）、SportsShoes.com（英国）、Mountex（匈牙利）、Backcountry（美国）、Chamonix Outdoor（香港）、yocabito（日本）、Goofee 官网（日本）、Goofee Yahoo!ショッピング店（日本）、PUMP ONLINE STORE（日本）、グッぼる goodbouldering（日本）
+
+**比价站（每小时）**：10 个——PriceRunner（英国）、PriceRunner（瑞典）、PriceRunner（丹麦）、billiger.de（德国比价）、beslist.nl（荷兰比价）、Achatmoinscher（法国比价）、Lyst（英国聚合）、BigGo（美国，含 Amazon/eBay/adidas US）、価格.com（日本比价）、에누리 Enuri（韩国比价）
+
+**二手平台（每 1–4 小时）**：28 个——eBay 美国、eBay 英国、eBay 德国、eBay 法国、eBay 意大利、eBay 澳大利亚、Kleinanzeigen（德国二手）、willhaben（奥地利二手）、FINN.no（挪威二手）、Tori.fi（芬兰二手）、DBA.dk（丹麦二手）、Blocket（瑞典二手）、Bazoš.cz（捷克二手）、Bazoš.sk（斯洛伐克二手）、Bazoš.pl（波兰二手）、Marktplaats（荷兰二手）、2dehands（比利时二手）、Gumtree（英国二手）、Allegro Lokalnie（波兰二手）、Kijiji（加拿大二手）、SidelineSwap（美国二手）、Yahoo!オークション（日本拍卖）、ラクマ Rakuma（日本フリマ）、ジモティー Jimoty（日本本地二手）、당근마켓 Daangn（韩国本地二手）、번개장터 Bunjang（韩国二手）、Novelship（新加坡球鞋转售）、露天拍賣 Ruten（台湾）
+
+- 设置放在 `config.d/*.yaml`，和 `config.yaml` 的 stores 合并读取。新来源的写法规范见 `PARSER_SPEC.md`。
+- **新规则（2026-11-05 你定的）**：预估利润低于 ¥150 的不推送，只进日报（`rules.min_profit`）。二手和近新的利润按售价 ¥800 算（`profit.used_sale_price`）；二手平台上成色不明的也按 ¥800 算。
+- **按成色推送**：只推全新、近新和成色未知的；有使用痕迹的二手只进日报（`rules.push_conditions`）。
+- 比价站里认不出尺码的条目只进日报，不推送，因为这类条目太多。
+- 比价站和二手平台用 `every_minutes` 降低检查频率，减少被封的风险；一条 listing 出现一次就算数（`confirm_runs: 1`）。
+- 日报不再逐码列出全部有货尺码，因为几百行会超过 Gmail 的 102KB 上限被截断；改成每个来源一行概况。
+- 折扣站（Dealabs、mydealz 等 7 个）的代码已经写好，但目前停用，在 `config.d/deals.yaml` 里设了 `enabled: false`。
+- 读不了、已排除：Zalando、各地 adidas 官网、Vinted、Leboncoin、idealo、Deporvillage、OzBargain（有反爬拦截，按规则不绕过）；MTBiker、Subito、Amazon 网站本身（你确认排除）；中国大陆渠道全部不做。
 
 ---
 

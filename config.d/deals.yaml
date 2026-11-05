@@ -1,0 +1,117 @@
+# 折扣站组：Pepper 平台（Dealabs / mydealz / hotukdeals / Pepper.pl / Chollometro / Preisjäger）+ Slickdeals RSS。
+# 一条未过期的折扣帖 = 一条“有货”listing（variant "1"），过期/老帖 = 缺货；帖子不给逐码库存，
+# 标题里的尺码多是范围，不猜（码制不明），所以 size_verified: false。shipping 0：各商家运费不同，未计。
+#
+# 已放弃：OzBargain（ozbargain.com.au/brand/five-ten/feed、/tag/climbing-shoes/feed 均返回 403 Cloudflare
+#         "Just a moment..." 挑战页；按规则不绕过，未配置）。
+stores:
+  - id: dealabs_fr
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Dealabs（法国折扣社区）
+    type: pepper
+    segment: deals
+    enabled: false       # 你没选折扣站，先停用；以后想开改成 true
+    domain: www.dealabs.com
+    currency: EUR
+    region: FR
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, "hi angle", "five ten"]   # 3 次请求；"hi angle" 补 Dealabs 漏掉的 "Hi-angle" 标题
+    max_age_days: 30   # 未过期但发布超过 30 天的帖子记 UNKNOWN（老帖常没人标过期）
+
+  - id: mydealz_de
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: mydealz（德国折扣社区）
+    type: pepper
+    segment: deals
+    enabled: false       # 你没选折扣站，先停用；以后想开改成 true
+    domain: www.mydealz.de
+    currency: EUR
+    region: DE
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, "hi angle", "five ten"]   # 3 次请求；"hi angle" 补 Dealabs 漏掉的 "Hi-angle" 标题
+    max_age_days: 30   # 未过期但发布超过 30 天的帖子记 UNKNOWN（老帖常没人标过期）
+
+  - id: hotukdeals_uk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: hotukdeals（英国折扣社区）
+    type: pepper
+    segment: deals
+    enabled: false       # 你没选折扣站，先停用；以后想开改成 true
+    domain: www.hotukdeals.com
+    currency: GBP
+    region: GB
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, "hi angle", "five ten"]   # 3 次请求；"hi angle" 补 Dealabs 漏掉的 "Hi-angle" 标题
+    max_age_days: 30   # 未过期但发布超过 30 天的帖子记 UNKNOWN（老帖常没人标过期）
+
+  - id: pepper_pl
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Pepper.pl（波兰折扣社区）
+    type: pepper
+    segment: deals
+    enabled: false       # 你没选折扣站，先停用；以后想开改成 true
+    domain: www.pepper.pl
+    currency: PLN
+    region: PL
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, "hi angle", "five ten"]   # 3 次请求；"hi angle" 补 Dealabs 漏掉的 "Hi-angle" 标题
+    max_age_days: 30   # 未过期但发布超过 30 天的帖子记 UNKNOWN（老帖常没人标过期）
+
+  - id: chollometro_es
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Chollometro（西班牙折扣社区）
+    type: pepper
+    segment: deals
+    enabled: false       # 你没选折扣站，先停用；以后想开改成 true
+    domain: www.chollometro.com
+    currency: EUR
+    region: ES
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, "hi angle", "five ten"]   # 3 次请求；"hi angle" 补 Dealabs 漏掉的 "Hi-angle" 标题
+    max_age_days: 30   # 未过期但发布超过 30 天的帖子记 UNKNOWN（老帖常没人标过期）
+
+  - id: preisjaeger_at
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Preisjäger（奥地利折扣社区）
+    type: pepper
+    segment: deals
+    enabled: false       # 你没选折扣站，先停用；以后想开改成 true
+    domain: www.preisjaeger.at
+    currency: EUR
+    region: AT
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, "hi angle", "five ten"]   # 3 次请求；"hi angle" 补 Dealabs 漏掉的 "Hi-angle" 标题
+    max_age_days: 30   # 未过期但发布超过 30 天的帖子记 UNKNOWN（老帖常没人标过期）
+
+  - id: slickdeals_us
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Slickdeals（美国折扣社区）
+    type: slickdeals
+    segment: deals
+    enabled: false       # 你没选折扣站，先停用；以后想开改成 true
+    currency: USD
+    region: US
+    shipping: 0
+    every_minutes: 60
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle]      # 1 次请求（RSS）；Slickdeals 是 OR 搜索，"hi angle"/"five ten" 全是无关结果
+    max_age_days: 14         # RSS 无过期标记：超过 14 天的帖子记为缺货

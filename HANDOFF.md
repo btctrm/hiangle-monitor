@@ -395,3 +395,17 @@ python3 -m hmon digest
 - 推送顺序调整，寄卖店读取成色
 
 本交接报告（`HANDOFF.md`）和更正后的 `TASKS.md`，通过 PR #4 合并。
+
+---
+
+## 13. 2026-11-05 追加（回到 10-09 那个会话继续做）
+
+- 把 10-09 做好但没上传的扩展版合并进来：`config.d/*.yaml`（8 个分组）+ 约 45 个新解析器，`run.load_cfg()` 合并 config.d，`run.parser_for()` 按 type 动态导入模块。新来源全部 `trial: true`。
+- 重复来源的处理：Bergzeit、GearX、Poshmark 保留 11-04 的配置（线上有状态记录，换解析器会改变 key，导致误推“新上架”）；eBay 换成新 `ebay.py`（多站点、按 conditionId 判断成色），ids 改为 ebay_com/uk/de/fr/it/au，删掉旧的 ebay_us/gb/de（它们从没有密钥，state 里没有记录）。
+- 新规则：`rules.min_profit: 150`，`profit.used_sale_price: 800`（成色为 used / like_new 的按这个价算，二手平台或 `unknown_as_used` 店成色不明的也按这个价）；`rules.push_conditions: [new, like_new, unknown]`（取代 push_used）；每店 `every_minutes`、`confirm_runs`；比价站 `segment: aggregator` 的码制不明条目不推送（`push_unknown_size` 可覆盖）。
+- 成色新增 `like_new`（【近新】）。sizes：支持 “22.0cm / US6.0”，以及日本 cm、韩国 mm（UK = cm − 18.5，【未确认】没拿 adidas 日本官方表核对）。
+- 日报：“各店全部有货尺码”改为“各来源概况”表；样式放进 <style>。67 个来源时约 27KB。
+- Yahoo!オークション 搜索页改成 Next.js，解析器改读 `__NEXT_DATA__`，旧 HTML 写法作为后备。
+- 测试新增 `tests/test_merge.py`（6 个），合计 33 个，在 3.11 上通过。
+- 本会话的沙箱**能直接访问店铺**（和 11-04 那个会话不同），所以是在沙箱里用线上 state 演练的。演练时 PriceRunner、beslist、Backcountry 返回 HTTP 202，BigGo 找不到数据，EpicTV 返回 403。这些可能只是沙箱 IP 的问题，部署后要以 GitHub 上的运行结果为准。
+- 这次部署没有改 workflow（上传 zip 时 `.github` 会被删掉）；第 10 节第 2 条“邮件兜底”还没做。

@@ -1,0 +1,99 @@
+# eBay 组：官方 Browse API（hmon/parsers/ebay.py），一个模块服务多个站点，靠 marketplace 区分。
+# 需要 GitHub secrets：EBAY_APP_ID / EBAY_CERT_ID（developer.ebay.com 免费注册 Production keyset）。
+# 没配密钥时每店返回 ok=True + “未配置 eBay 密钥，已跳过”，不算失效。
+# 每店每轮请求：1 次令牌（进程内缓存，多站共用）+ 1~2 次搜索（limit=200，按 next 翻页，max_pages=2）。
+# 只要一口价/可议价（buyingOptions:{FIXED_PRICE|BEST_OFFER}），拍卖不算“有货”。
+# itemLocationCountry 限定为本站国家，避免同一条 listing 在多个站点重复推送。
+# 二手单件：每条 listing = 有货；本轮搜索里消失 = 下架。尺码来自卖家标题，size_verified: false。
+#
+# 给集成者：config.yaml 里旧的 ebay_us 条目请删除（已由下面的 ebay_com 取代；id 不同以免冲突）。
+stores:
+  - id: ebay_com
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: eBay 美国
+    type: ebay
+    segment: used
+    marketplace: EBAY_US
+    item_location_country: US
+    search: hiangle          # 只搜 hiangle：不少标题只写 adidas Hiangle，不带 five ten
+    currency: USD
+    region: US
+    shipping: 15             # 估算：美国境内寄转运仓
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+
+  - id: ebay_uk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: eBay 英国
+    type: ebay
+    segment: used
+    marketplace: EBAY_GB
+    item_location_country: GB
+    search: hiangle          # 只搜 hiangle：不少标题只写 adidas Hiangle，不带 five ten
+    currency: GBP
+    region: GB
+    shipping: 5              # 估算：Royal Mail / Evri
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+
+  - id: ebay_de
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: eBay 德国
+    type: ebay
+    segment: used
+    marketplace: EBAY_DE
+    item_location_country: DE
+    search: hiangle          # 只搜 hiangle：不少标题只写 adidas Hiangle，不带 five ten
+    currency: EUR
+    region: DE
+    shipping: 6              # 估算：DHL/Hermes 包裹
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+
+  - id: ebay_fr
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: eBay 法国
+    type: ebay
+    segment: used
+    marketplace: EBAY_FR
+    item_location_country: FR
+    search: hiangle          # 只搜 hiangle：不少标题只写 adidas Hiangle，不带 five ten
+    currency: EUR
+    region: FR
+    shipping: 10             # 估算：Colissimo 寄德国转运仓
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+
+  - id: ebay_it
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: eBay 意大利
+    type: ebay
+    segment: used
+    marketplace: EBAY_IT
+    item_location_country: IT
+    search: hiangle          # 只搜 hiangle：不少标题只写 adidas Hiangle，不带 five ten
+    currency: EUR
+    region: IT
+    shipping: 12             # 估算：意大利寄德国转运仓
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+
+  - id: ebay_au
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: eBay 澳大利亚
+    type: ebay
+    segment: used
+    marketplace: EBAY_AU
+    item_location_country: AU
+    search: hiangle          # 只搜 hiangle：不少标题只写 adidas Hiangle，不带 five ten
+    currency: AUD
+    region: AU
+    shipping: 15             # 估算：澳洲境内寄转运仓（AU 站尺码码制混用，标题裸数字不换算）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false

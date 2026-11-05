@@ -1,0 +1,107 @@
+# us_asia_retail：美国 / 香港 / 日本零售（GearX / Backcountry / Chamonix HK / yocabito / Goofee / PUMP / グッぼる）
+stores:
+  - id: backcountry
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Backcountry（美国）
+    type: backcountry
+    home: https://www.backcountry.com/five-ten-hiangle-climbing-shoe
+    search: hiangle
+    paths: [five-ten-hiangle-climbing-shoe, five-ten-hiangle-pro-climbing-shoe]
+    currency: USD
+    region: US
+    shipping: 0              # 估算（美国境内，满 $50 包邮）
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true      # SKU 表写明 "US Men's Footwear" / "Men's 12.5/Women's 13.5"
+
+  - id: chamonix_hk
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Chamonix Outdoor（香港）
+    type: shopify_plus
+    domain: www.chamonix.com.hk
+    home: https://www.chamonix.com.hk/products/hiangle-womens
+    discover: search_html    # suggest.json 返回 417，只能用搜索页
+    search: hiangle
+    handles: [hiangle-womens]
+    gender: W
+    currency: HKD
+    region: HK
+    shipping: 0              # 估算（香港本地）
+    every_minutes: 120       # 单一款式、不分尺码，低频
+    confirm_runs: 2
+    size_verified: false     # 店铺只有一个 Default Title 变体，看不出尺码
+
+  - id: yocabito
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: yocabito（日本）
+    type: yocabito
+    base: https://yocabito.jp
+    home: https://yocabito.jp/p/search?keyword=hiangle
+    search: hiangle
+    paths: [/c/lifestyle/6000000143842, /c/lifestyle/9980030013809, /c/lifestyle/6000000148262]
+    currency: JPY
+    region: JP
+    shipping: 0              # 估算（日本境内）
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true      # 日本 cm 码，按 UK = cm − 18.5 换算
+
+  - id: goofee_shop
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Goofee 官网（日本）
+    type: shopify_plus
+    domain: goofee.shop
+    home: https://goofee.shop/search?q=ハイアングル&type=product
+    discover: search_html    # suggest.json 返回 417
+    search: ハイアングル
+    handles: [ハイアングル-1, ハイアングルプロ]
+    size_system: AUTO        # "US8.0(26cm)"：以 cm 换算
+    currency: JPY
+    region: JP
+    shipping: 0              # 估算（日本境内）
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true
+
+  - id: goofee_yahoo
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Goofee Yahoo!ショッピング店（日本）
+    type: yahoo_shopping
+    shop: goofee
+    home: https://store.shopping.yahoo.co.jp/goofee/search.html?p=hiangle
+    search: hiangle
+    srids: [fvh, fthp]
+    currency: JPY
+    region: JP
+    shipping: 0              # 估算（日本境内）
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true      # "US8.0(26cm)"：以 cm 换算
+
+  - id: pump_jp
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: PUMP ONLINE STORE（日本）
+    type: pump_jp
+    home: https://store.pump-climbing.com/products/110919.html
+    search: hiangle
+    product_ids: ["110919", "110920"]
+    currency: JPY
+    region: JP
+    shipping: 0              # 估算（日本境内）
+    every_minutes: 0
+    confirm_runs: 2
+    size_verified: true      # 美码（男/中性），"US8h" = US 8.5
+
+  - id: goodbouldering
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: グッぼる goodbouldering（日本）
+    type: goodbouldering
+    home: https://goodbouldering.com/?mode=srh&keyword=hiangle
+    search: hiangle
+    product_ids: ["142615197", "142617067", "147419498"]
+    currency: JPY
+    region: JP
+    shipping: 0              # 估算（日本境内）
+    every_minutes: 60        # 店铺标注廃番（停产），低频
+    confirm_runs: 2
+    size_verified: true      # 男款裸美码 / Pro 带 cm；女款(WMS)码制不明，不换算

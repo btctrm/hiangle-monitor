@@ -2,7 +2,8 @@
 # 以后监控别的鞋：复制一家店的配置，改 search / title_must / slug_must 即可。
 
 profit:
-  sale_price: 1050        # 国内售价（元）
+  sale_price: 1050        # 国内售价（元，全新）
+  used_sale_price: 800    # 二手（近新/有使用痕迹）国内售价，二手和近新的利润按这个算（2026-11-05 你定的）
   domestic_post: 10       # 国内邮费（元）
   fx_fee: 0.015           # 信用卡换汇损耗
   forwarder:              # 每双转运费（元），按店铺所在地区
@@ -21,7 +22,8 @@ rules:
   max_separate_alerts: 5  # 一轮超过几条就合并成一条
   digest_hour_bj: 9       # 每天几点（北京时间）后发日报邮件
   price_drop_pct: 10      # 同一尺码价格连续两轮确认后比之前低这么多（%），就发“降价”提醒；0 = 关闭
-  push_used: true         # 二手货达标也推（标题带【二手】）；false = 二手只进日报
+  min_profit: 150         # 预估利润低于这个数（元）不推送，只进日报（2026-11-05 你定的）
+  push_conditions: [new, like_new, unknown]   # 推送哪些成色；有使用痕迹的二手（used）只进日报
   price_drop_push: true   # 降价提醒是否推送（false = 只进日报）；只有冷门码降价时只进日报
 
 # 不再监控的商品（看过觉得不要的）：不推送、不进日报。
@@ -31,6 +33,7 @@ ignore:
     product: five-ten-hiangle-climbing-shoes-mens-1702276
     note: 二手 “41.5” 码，磨损严重，2026-10-08 你要求不再监控
 
+# 更多来源在 config.d/*.yaml（比价站、二手平台、eBay 各站等），格式同下面
 stores:
   - id: bergfreunde_eu
     name: Bergfreunde（德国）
@@ -110,42 +113,6 @@ stores:
     size_system: AUTO      # 页面写 “EU 42”
     size_verified: true
 
-  - id: ebay_us
-    name: eBay 美国
-    type: ebay
-    marketplace: EBAY_US
-    search: five ten hiangle
-    currency: USD
-    region: US
-    shipping: 15           # 估算
-    enabled: true          # 没配 EBAY_APP_ID / EBAY_CERT_ID 时自动跳过
-
-  # 同一套 eBay 密钥，不用另外申请
-  - id: ebay_gb
-    name: eBay 英国
-    type: ebay
-    marketplace: EBAY_GB
-    search: five ten hiangle
-    currency: GBP
-    region: GB
-    shipping: 5            # 估算
-    enabled: true
-
-  - id: ebay_de
-    name: eBay 德国
-    type: ebay
-    marketplace: EBAY_DE
-    search: five ten hiangle
-    currency: EUR
-    region: DE
-    shipping: 7            # 估算
-    enabled: true
-
-  # ———— 试运行店铺（2026-11-04 加）————
-  # 通过网页搜索找到、但还没实际读过的店。trial: true 的意思：
-  #   读不了不发“监控失效”，只在日报“运行情况”里显示失败原因；读到达标的货照常推送，推送里会注明“试运行”。
-  # 验收：Actions → hiangle-monitor → Run workflow，mode 选 check，store 填店铺 id，对照网页核对尺码和库存。
-  # 验收通过后删掉 trial 这一行；一直失败的整段删掉即可。
   - id: gearx
     name: GearX / Outdoor Gear Exchange（美国）
     type: shopify

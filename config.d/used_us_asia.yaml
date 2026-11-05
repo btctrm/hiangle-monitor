@@ -1,0 +1,124 @@
+# 北美 / 日韩台二手组：Poshmark / Kijiji / SidelineSwap / Yahoo!オークション / ラクマ / ジモティー /
+# 당근마켓 / 번개장터 / Novelship / 露天拍賣
+# 二手单件：每条在售 listing = 有货；本轮搜索里消失 = 下架。尺码多为卖家自由文本（只认显式 UK/EU/US+男女/cm/mm），
+# 认不出标“码制不明”，所以 size_verified: false。
+stores:
+  - id: kijiji_ca
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Kijiji（加拿大二手）
+    type: kijiji
+    segment: used
+    currency: CAD
+    region: CA
+    shipping: 25             # 估算：私人卖家 Canada Post 寄转运仓（很多只面交）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, hi angle]   # 2 次请求
+
+  - id: sidelineswap_us
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: SidelineSwap（美国二手）
+    type: sidelineswap
+    segment: used
+    currency: USD
+    region: US
+    shipping: 10             # 估算：平台运费按卖家设置
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle]      # 1 次请求
+
+  - id: yahoo_auctions_jp
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Yahoo!オークション（日本拍卖）
+    type: yahoo_auctions_jp
+    segment: used
+    currency: JPY
+    region: JP
+    shipping: 1000           # 估算：卖家寄日本转运仓（页面常写 ＋送料680円 等）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, ファイブテン ハイアングル]   # 2 次请求
+
+  - id: rakuma_jp
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: ラクマ Rakuma（日本フリマ）
+    type: rakuma
+    segment: used
+    currency: JPY
+    region: JP
+    shipping: 0              # ラクマ多为“送料込”（卖家包邮）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [ハイアングル]  # 1 次搜索 + 命中件的详情页（≤4）
+    max_details: 4
+
+  - id: jimoty_jp
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: ジモティー Jimoty（日本本地二手）
+    type: jimoty
+    segment: used
+    currency: JPY
+    region: JP
+    shipping: 1000           # 估算：多数只面交，需卖家同意邮寄
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [hiangle, ハイアングル]   # 2 次请求
+
+  - id: daangn_kr
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: 당근마켓 Daangn（韩国本地二手）
+    type: daangn
+    segment: used
+    currency: KRW
+    region: KR
+    shipping: 4000           # 估算：卖家用 편의점 택배 寄韩国转运仓（很多只面交）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [하이앵글]      # 1 次请求；结果按地区（默认首尔一带）
+
+  - id: bunjang_kr
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: 번개장터 Bunjang（韩国二手）
+    type: bunjang
+    segment: used
+    currency: KRW
+    region: KR
+    shipping: 4000           # 估算：卖家寄韩国转运仓（部分包邮）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false
+    searches: [파이브텐 하이앵글]   # 搜索 1 次 + 命中详情 ≤4 次
+    max_details: 4
+
+  - id: novelship_sg
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: Novelship（新加坡球鞋转售）
+    type: novelship
+    segment: used            # 转售平台：卖单出现即真实；鞋本身全新
+    currency: SGD
+    region: SG
+    shipping: 35             # 估算：平台国际运费（页面 delivery_base 约 35，币种随买家地区）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: true      # 平台标准尺码 "US 8"（男/中性）/ "US 8W"（女）
+    silhouette: adidas Five Ten Hiangle
+    max_products: 5          # 款式列表 1 次 + 有卖单的款 ≤5 次
+
+  - id: ruten_tw
+    trial: true            # 试运行：读取失败不发“监控失效”，推送里注明请核实；人工验收后删掉
+    name: 露天拍賣 Ruten（台湾）
+    type: ruten
+    segment: used            # 拍卖/代购平台：单条 listing 出现即真实
+    currency: TWD
+    region: TW
+    shipping: 0              # 命中的多为 eBay 代购镜像，运费另见 note（多为免运或 300+ TWD）
+    every_minutes: 120
+    confirm_runs: 1
+    size_verified: false     # 部分规格只写 "8.5"，仅在标题写 Men's 时按美码男换算
+    searches: [hiangle]      # 搜索 1 次 + 批量详情 1 次
